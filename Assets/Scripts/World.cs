@@ -123,6 +123,26 @@ public class World : MonoBehaviour
         return Chunks[GetChunkCoordFromVector3(worldPos)];
     }
 
+    public void PlaceBlock(Vector3 worldPos, Block block)
+    {
+        Vector3Int chunkPos = GetChunkCoordFromVector3(worldPos);
+        int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
+        Chunks[chunkPos].AddModification(new(blockPos, block)).Forget();
+
+        if (blockPos.x == 0)
+            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Left])].MarkDirty();
+        if (blockPos.x == VoxelData.ChunkWidth - 1)
+            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Right])].MarkDirty();
+
+        if (blockPos.z == 0)
+            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
+        if (blockPos.z == VoxelData.ChunkLength - 1)
+            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Front])].MarkDirty();
+        //Debug.Log($"{blockPos.x}, {blockPos.y}, {blockPos.z}");
+
+    }
+
+
     private void Update()
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
@@ -245,23 +265,17 @@ public class World : MonoBehaviour
 
     private Vector3Int GetChunkCoordFromVector3(int3 pos)
     {
-        pos.x -= (pos.x < 0 && pos.x % VoxelData.ChunkWidth != 0) ? VoxelData.ChunkWidth : 0;
-        pos.y -= (pos.y < 0 && pos.y % VoxelData.ChunkHeight != 0) ? VoxelData.ChunkHeight : 0;
-        pos.z -= (pos.z < 0 && pos.z % VoxelData.ChunkLength != 0) ? VoxelData.ChunkLength : 0;
-        int x = pos.x / VoxelData.ChunkWidth;
-        int y = pos.y / VoxelData.ChunkHeight;
-        int z = pos.z / VoxelData.ChunkLength;
+        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
+        int y = Mathf.FloorToInt(pos.y / VoxelData.ChunkHeight);
+        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkLength);
         return new(x, y, z);
     }
 
-    Vector3Int GetChunkCoordFromVector3(Vector3 pos)
+    public Vector3Int GetChunkCoordFromVector3(Vector3 pos)
     {
-        pos.x -= (pos.x < 0 && pos.x % VoxelData.ChunkWidth != 0) ? VoxelData.ChunkWidth : 0;
-        pos.y -= (pos.y < 0 && pos.y % VoxelData.ChunkHeight != 0) ? VoxelData.ChunkHeight : 0;
-        pos.z -= (pos.z < 0 && pos.z % VoxelData.ChunkLength != 0) ? VoxelData.ChunkLength : 0;
-        int x = (int)(pos.x / VoxelData.ChunkWidth);
-        int y = (int)(pos.y / VoxelData.ChunkHeight);
-        int z = (int)(pos.z / VoxelData.ChunkLength);
+        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
+        int y = Mathf.FloorToInt(pos.y / VoxelData.ChunkHeight);
+        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkLength);
         return new(x, y, z);
     }
 
@@ -294,6 +308,9 @@ public class World : MonoBehaviour
         if (Chunks.TryGetValue(thisChunk, out Chunk chunk))
         {
             int3 block = GetPosInChunkFromVector3(thisChunk, worldPos);
+
+            // TODO think something for it
+            chunk.VoxelMapAccess.Complete();
             return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
         }
         return false;

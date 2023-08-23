@@ -78,7 +78,8 @@ public class Player : MonoBehaviour
     {
         if (World != null && highlightBlock.gameObject.activeSelf && value.isPressed)
         {
-            World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
+            //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
+            World.PlaceBlock(highlightBlock.position, 0);
         }
     }
 
@@ -96,7 +97,8 @@ public class Player : MonoBehaviour
 
             if (!(xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock))
             {
-                World.GetChunkFromVector3(placeBlock.position).EditVoxel(placeBlock.position, selectedBlockIndex);
+                //World.GetChunkFromVector3(placeBlock.position).EditVoxel(placeBlock.position, selectedBlockIndex);
+                World.PlaceBlock(placeBlock.position, selectedBlockIndex);
             }
         }
     }
@@ -183,18 +185,25 @@ public class Player : MonoBehaviour
 
             if (World.CheckForVoxel(pos))
             {
+                //World.GetChunkCoordFromVector3(pos)
                 highlightBlock.position = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
                 //placeBlock.position = lastPos;
 
                 float xCheck = pos.x % 1;
                 if (xCheck > 0.5f)
                     xCheck--;
+                else if (xCheck < -0.5f)
+                    xCheck++;
                 float yCheck = pos.y % 1;
                 if (yCheck > 0.5f)
                     yCheck--;
+                else if (yCheck < -0.5f)
+                    yCheck++;
                 float zCheck = pos.z % 1;
                 if (zCheck > 0.5f)
                     zCheck--;
+                else if (zCheck < -0.5f)
+                    zCheck++;
 
                 if (Mathf.Abs(xCheck) < Mathf.Abs(yCheck) && Mathf.Abs(xCheck) < Mathf.Abs(zCheck))
                 {

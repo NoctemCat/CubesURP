@@ -192,9 +192,14 @@ public class Chunk
         Modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
     }
 
-    public void EditVoxel(Vector3 position, Block block)
+    //public void EditVoxel(Vector3 position, Block block)
+    //{
+    //    AddModification(new(World.Instance.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
+    //}
+
+    public void MarkDirty()
     {
-        AddModification(new(World.Instance.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
+        DirtyMesh = true;
     }
 
     async UniTaskVoid StartGenerating()
