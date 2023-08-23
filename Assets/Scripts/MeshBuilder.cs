@@ -205,9 +205,10 @@ static class MeshBuilder
         //[ReadOnly]
         //public NativeParallelHashMap<uint, IntPtr> ChunkVoxelMapPtrs;
         // TODO Return neighbours
-        [ReadOnly]
         //[NativeDisableContainerSafetyRestriction]
+        [ReadOnly]
         public Neighbours ChunkNeighbours;
+
         //[ReadOnly]
         //[NativeDisableUnsafePtrRestriction]
         //public IntPtr dummyMap;
@@ -293,7 +294,6 @@ static class MeshBuilder
                 }
 
                 return Blocks[(int)voxelMap[CalcIndex(pos)]].isTransparent;
-                //return true;
             }
 
             return Blocks[(int)VoxelMap[CalcIndex(pos)]].isTransparent;

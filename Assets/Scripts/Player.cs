@@ -9,6 +9,7 @@ public class Player : MonoBehaviour
 {
     public bool isGrounded;
     public bool isSprinting;
+    public bool ApplyGravity = true;
 
     private new Transform camera;
     private World World;
@@ -26,6 +27,7 @@ public class Player : MonoBehaviour
     public float gravity = -15f;
 
     public float playerWidth = 0.3f;
+
 
     private Vector3 velocity;
     private float verticalMomentum = 0f;
@@ -146,7 +148,7 @@ public class Player : MonoBehaviour
             isGrounded = false;
         }
 
-        if (verticalMomentum > gravity)
+        if (ApplyGravity && verticalMomentum > gravity)
             verticalMomentum += Time.fixedDeltaTime * gravity;
 
         float moveSpeed = (!isSprinting) ? walkSpeed : sprintSpeed;

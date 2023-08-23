@@ -94,7 +94,7 @@ public struct MeshDataHolder
     {
         await voxelMapAccess;
         // TODO add neighbours
-        JobHandle access = FillNeighbours(out Neighbours neighbours);
+        JobHandle access = FillNeighbours(voxelMapAccess, out Neighbours neighbours);
         MeshBuilder.SortVoxelFacesJob sortVoxelsJob = new()
         {
             Data = Data,
@@ -107,10 +107,11 @@ public struct MeshDataHolder
             SolidFaces = FacesData.SolidFaces.AsParallelWriter(),
             TransparentFaces = FacesData.TransparentFaces.AsParallelWriter(),
         };
+        //return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, voxelMapAccess);
         return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, access);
     }
 
-    public JobHandle FillNeighbours(out Neighbours neighbours)
+    public JobHandle FillNeighbours(JobHandle voxelMapAccess, out Neighbours neighbours)
     {
         NativeList<JobHandle> accesses = new(4, Allocator.Temp);
 
@@ -154,10 +155,8 @@ public struct MeshDataHolder
         return JobHandle.CombineDependencies(accesses.AsArray());
     }
 
-    public async UniTask ResizeMeshData(JobHandle voxelMapAccess)
+    public void ResizeMeshData()
     {
-        await voxelMapAccess;
-
         int allFacesCount = FacesData.SolidFaces.Length + FacesData.TransparentFaces.Length;
 
         FacesData.AllFaces.Clear();

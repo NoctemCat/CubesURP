@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
 using Unity.Collections;
@@ -95,7 +96,7 @@ public class Chunk
 
     public JobHandle VoxelMapAccess;
 
-    JobHandle FillingMods;
+    public JobHandle FillingMods;
 
 
     public Chunk(Vector3Int chunkPos)
@@ -124,7 +125,7 @@ public class Chunk
 
         _holder.Init(ChunkPos);
 
-        StartGenerating();
+        StartGenerating().Forget();
     }
 
     ~Chunk()
@@ -132,20 +133,19 @@ public class Chunk
         VoxelMap.Dispose();
         Modifications.Dispose();
         Structures.Dispose();
-
         _holder.Dispose();
     }
 
     public void Update()
     {
+        if (Modifications.Length > 0 && !IsGeneratingMesh)
+        {
+            DirtyMesh = true;
+        }
+
         if (DirtyMesh && !IsGeneratingMesh)
         {
             StartMeshGen().Forget();
-        }
-
-        if (Modifications.Length > 0 && !IsGeneratingMesh && !DirtyMesh)
-        {
-            DirtyMesh = true;
         }
 
         if (RequestingStop && !IsGeneratingMesh)
@@ -177,11 +177,27 @@ public class Chunk
         Graphics.RenderMesh(trp, _chunkMesh, 1, Matrix4x4.Translate(WorldPos));
     }
 
-    void StartGenerating()
+    public async UniTaskVoid AddModification(VoxelMod mod)
     {
-        GenerateVoxelMap();
+        await VoxelMapAccess;
+        VoxelMapAccess.Complete();
+        Modifications.Add(mod);
+    }
+
+    public async UniTaskVoid AddRangeModification(List<VoxelMod> mod)
+    {
+        await VoxelMapAccess;
+        VoxelMapAccess.Complete();
+        Modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
+    }
+
+    async UniTaskVoid StartGenerating()
+    {
+        VoxelMapAccess = GenerateVoxelMap();
         DirtyMesh = true;
         //World.Instance.AddChunkVoxelMap(ChunkPos, VoxelMap);
+        await VoxelMapAccess;
+        World.Instance.AddStructures(Structures).Forget();
     }
 
 
@@ -190,12 +206,14 @@ public class Chunk
         if (!IsGeneratingMesh)
         {
             IsGeneratingMesh = true;
+            //DirtyMesh = false;
 
             var isFinished = await GenerateMesh();
             if (isFinished)
             {
                 IsMeshDrawable = true;
                 IsGeneratingMesh = false;
+                DirtyMesh = false;
             }
             else
             {
@@ -205,7 +223,7 @@ public class Chunk
         }
     }
 
-    void GenerateVoxelMap()
+    JobHandle GenerateVoxelMap()
     {
         GenerateChunkJob generateChunk = new()
         {
@@ -217,13 +235,17 @@ public class Chunk
             VoxelMap = VoxelMap,
             Structures = Structures.AsParallelWriter(),
         };
-        VoxelMapAccess = generateChunk.Schedule(VoxelMap.Length, 8);
+        return generateChunk.Schedule(VoxelMap.Length, 8);
     }
 
     async UniTask<bool> GenerateMesh()
     {
-        //if (Modifications.Length > 0)
-        //    await ApplyMod();
+        if (Modifications.Length > 0)
+            await ApplyMods().ContinueWith(async () =>
+            {
+                await VoxelMapAccess;
+                Modifications.Clear();
+            });
 
         await _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
@@ -232,38 +254,43 @@ public class Chunk
         _holder.ResizeFacesData();
 
         VoxelMapAccess = await _holder.SortVoxels(VoxelMapAccess, VoxelMap);
+        await VoxelMapAccess;
 
         if (RequestingStop) return false;
 
-        await _holder.ResizeMeshData(VoxelMapAccess);
+        _holder.ResizeMeshData();
 
         await _holder.FillMeshData();
 
         if (RequestingStop) return false;
 
         _holder.BuildMesh(_chunkMesh);
-        DirtyMesh = false;
 
         return true;
     }
 
 
-    //public async UniTask ApplyMod()
-    //{
-    //    NativeArray<VoxelMod> copy = new(Modifications.Length, Allocator.Persistent);
-    //    copy.CopyFrom(Modifications.AsArray());
-    //    ApplyModsJob applyModsJob = new()
-    //    {
-    //        Data = Data,
-    //        Modifications = copy,
-    //        VoxelMap = VoxelMap,
-    //    };
-    //    VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, VoxelMapAccess);
-    //    await VoxelMapAccess;
-    //    copy.Dispose();
-    //    Modifications.Clear();
-    //    //DirtyMesh = true;
-    //}
+    public async UniTask ApplyMods()
+    {
+        await VoxelMapAccess;
+        NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
+        for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
+        {
+            if (World.Instance.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+                neighbours.Add(chunk.VoxelMapAccess);
+        }
+        neighbours.Add(VoxelMapAccess);
+
+        ApplyModsJob applyModsJob = new()
+        {
+            Data = Data,
+            Modifications = Modifications.AsArray(),
+            VoxelMap = VoxelMap,
+        };
+        VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, JobHandle.CombineDependencies(neighbours.AsArray()));
+
+        //DirtyMesh = true;
+    }
 }
 
 [BurstCompile]
@@ -305,7 +332,7 @@ public struct GenerateChunkJob : IJobParallelFor
             return Block.Bedrock;
 
         // BASIC TERRAIN PASSS
-        int terrainHeight = (int)(math.floor(Biome.MaxTerrainHeight * Get2DPerlin(new float2(pos.x, pos.z), 0f, Biome.TerrainScale)) + Biome.SolidGroundHeight);
+        int terrainHeight = (int)(math.floor(Biome.MaxTerrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biome.TerrainScale)) + Biome.SolidGroundHeight);
 
         Block voxelValue;
 
@@ -334,7 +361,7 @@ public struct GenerateChunkJob : IJobParallelFor
                 LodeSctruct lode = Biome.Lodes[i];
                 if (pos.y > lode.MinHeight && pos.y < lode.MaxHeight)
                 {
-                    if (Get3DPerlin(pos, lode.NoiseOffset, lode.Scale) > lode.Threshold)
+                    if (Get3DPerlin(Data, pos, lode.NoiseOffset, lode.Scale) > lode.Threshold)
                     {
                         voxelValue = lode.BlockID;
                     }
@@ -344,11 +371,11 @@ public struct GenerateChunkJob : IJobParallelFor
 
         if (pos.y == terrainHeight)
         {
-            if (Get2DPerlin(new float2(pos.x, pos.z), 750, Biome.TreeZoneScale) > Biome.TreeZoneThreshold)
+            if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, Biome.TreeZoneScale) > Biome.TreeZoneThreshold)
             {
                 // Checking transparentness
                 voxelValue = Block.Glass;
-                if (Get2DPerlin(new float2(pos.x, pos.z), 1250, Biome.TreePlacementScale) > Biome.TreePlacementThreshold)
+                if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, Biome.TreePlacementScale) > Biome.TreePlacementThreshold)
                 {
                     //Debug.Log("Tree placed");
                     // TODO re
@@ -360,22 +387,7 @@ public struct GenerateChunkJob : IJobParallelFor
         return voxelValue;
     }
 
-    readonly float Get2DPerlin(float2 position, float offset, float scale)
-    {
-        return noise.cnoise(new float2(
-            (position.x + 0.1f) / Data.ChunkWidth * scale + offset + Data.RandomXYZ.x,
-            (position.y + 0.1f) / Data.ChunkLength * scale + offset + Data.RandomXYZ.y)
-        );
-    }
 
-    readonly float Get3DPerlin(float3 position, float offset, float scale)
-    {
-        return noise.cnoise(new float3(
-            (position.x + 0.1f) / Data.ChunkWidth * scale + offset + Data.RandomXYZ.x,
-            (position.y + 0.1f) / Data.ChunkHeight * scale + offset + Data.RandomXYZ.y,
-            (position.z + 0.1f) / Data.ChunkLength * scale + offset + Data.RandomXYZ.z)
-        );
-    }
 }
 
 [BurstCompile]
