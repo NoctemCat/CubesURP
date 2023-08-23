@@ -8,7 +8,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-
+using static CubesUtils;
 public struct MeshData
 {
     public NativeList<Vertex> Vertices;
@@ -76,53 +76,42 @@ public struct VoxelMod
 public class Chunk
 {
     VoxelData Data;
-    private readonly World World;
     public int3 ChunkPos;
     public Vector3 WorldPos;
 
     public NativeArray<Block> VoxelMap;
+    public NativeList<StructureMarker> Structures;
+    public NativeList<VoxelMod> Modifications;
+    private MeshDataHolder _holder;
 
-    MeshData MeshData;
-    MeshFacesData FacesData;
-    readonly Mesh ChunkMesh;
-
-    NativeArray<int> CountBlocks;
-    NativeArray<int> Counters;
+    private readonly Mesh _chunkMesh;
 
     public bool IsMeshDrawable;
     public bool IsGeneratingMesh;
-    //public bool VoxelMapReady;
     public bool RequestingStop;
-
     public bool DirtyMesh;
 
     //UniTask GenTask;
 
-    JobHandle VoxelMapAccess;
+    public JobHandle VoxelMapAccess;
 
     JobHandle FillingMods;
 
-    public NativeList<VoxelMod> Modifications;
 
-    public Chunk(World world, Vector3Int chunkPos)
+    public Chunk(Vector3Int chunkPos)
     {
-        World = world;
-        Data = world.VoxelData;
+        Data = World.Instance.VoxelData;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
-        WorldPos = new(ChunkPos.x * Data.ChunkWidth, ChunkPos.y * Data.ChunkHeight, ChunkPos.z * Data.ChunkLength);
+        WorldPos = new(chunkPos.x * Data.ChunkWidth, chunkPos.y * Data.ChunkHeight, chunkPos.z * Data.ChunkLength);
 
         VoxelMap = new(Data.ChunkSize, Allocator.Persistent);
+        Structures = new(100, Allocator.Persistent);
 
-        ChunkMesh = new Mesh()
+        _chunkMesh = new Mesh()
         {
             subMeshCount = 2
         };
-        ChunkMesh.MarkDynamic();
-
-        MeshData.InitLists();
-        FacesData.InitLists();
-        CountBlocks = new(2, Allocator.Persistent);
-        Counters = new(JobsUtility.MaxJobThreadCount * JobsUtility.CacheLineSize, Allocator.Persistent);
+        _chunkMesh.MarkDynamic();
 
         Modifications = new(100, Allocator.Persistent);
 
@@ -133,17 +122,18 @@ public class Chunk
 
         DirtyMesh = false;
 
+        _holder.Init(ChunkPos);
+
         StartGenerating();
     }
 
     ~Chunk()
     {
         VoxelMap.Dispose();
-        MeshData.Dispose();
-        FacesData.Dispose();
-        CountBlocks.Dispose();
-        Counters.Dispose();
         Modifications.Dispose();
+        Structures.Dispose();
+
+        _holder.Dispose();
     }
 
     public void Update()
@@ -170,49 +160,30 @@ public class Chunk
 
         RenderParams rp = new()
         {
-            material = World.SolidMaterial,
+            material = World.Instance.SolidMaterial,
             shadowCastingMode = ShadowCastingMode.TwoSided,
             receiveShadows = true,
             renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
         };
         RenderParams trp = new()
         {
-            material = World.TransparentMaterial,
+            material = World.Instance.TransparentMaterial,
             shadowCastingMode = ShadowCastingMode.TwoSided,
             receiveShadows = true,
             renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
         };
 
-        Graphics.RenderMesh(rp, ChunkMesh, 0, Matrix4x4.Translate(WorldPos));
-        Graphics.RenderMesh(trp, ChunkMesh, 1, Matrix4x4.Translate(WorldPos));
+        Graphics.RenderMesh(rp, _chunkMesh, 0, Matrix4x4.Translate(WorldPos));
+        Graphics.RenderMesh(trp, _chunkMesh, 1, Matrix4x4.Translate(WorldPos));
     }
 
     void StartGenerating()
     {
         GenerateVoxelMap();
-        //await VoxelMapAccess;
-        //VoxelMapReady = true;
         DirtyMesh = true;
-        World.AddChunkVoxelMap(ChunkPos, VoxelMap);
-        //StartMeshGen();
+        //World.Instance.AddChunkVoxelMap(ChunkPos, VoxelMap);
     }
 
-    //public async UniTask ApplyMod()
-    //{
-    //    NativeArray<VoxelMod> copy = new(Modifications.Length, Allocator.Persistent);
-    //    copy.CopyFrom(Modifications.AsArray());
-    //    ApplyModsJob applyModsJob = new()
-    //    {
-    //        Data = Data,
-    //        Modifications = copy,
-    //        VoxelMap = VoxelMap,
-    //    };
-    //    VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, VoxelMapAccess);
-    //    await VoxelMapAccess;
-    //    copy.Dispose();
-    //    Modifications.Clear();
-    //    //DirtyMesh = true;
-    //}
 
     public async UniTaskVoid StartMeshGen()
     {
@@ -234,267 +205,65 @@ public class Chunk
         }
     }
 
-    async UniTask<bool> GenerateMesh()
-    {
-        //if (Modifications.Length > 0)
-        //    await ApplyMod();
-
-        await CountBlockTypes();
-
-        if (RequestingStop) return false;
-
-        ResizeFacesData();
-
-        await SortVoxels();
-
-        if (RequestingStop) return false;
-
-        await ResizeMeshData();
-
-        await FillMeshData();
-
-        if (RequestingStop) return false;
-
-        BuildMesh();
-
-        return true;
-    }
-
     void GenerateVoxelMap()
     {
         GenerateChunkJob generateChunk = new()
         {
             Data = Data,
-            Biome = World.Biome,
-            XYZMap = World.XYZMap,
+            Biome = World.Instance.Biome,
+            XYZMap = World.Instance.XYZMap,
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
-            //Structures = World.Structures.AsParallelWriter(),
+            Structures = Structures.AsParallelWriter(),
         };
         VoxelMapAccess = generateChunk.Schedule(VoxelMap.Length, 8);
     }
 
-    async UniTask CountBlockTypes()
+    async UniTask<bool> GenerateMesh()
     {
-        for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
-        {
-            int threadOffset = i * JobsUtility.CacheLineSize;
-            Counters[threadOffset] = 0;
-            Counters[threadOffset + 1] = 0;
-        }
+        //if (Modifications.Length > 0)
+        //    await ApplyMod();
 
-        await VoxelMapAccess;
-        MeshBuilder.CountBlockTypesJob countBlockTypes = new()
-        {
-            Blocks = World.Blocks,
-            VoxelMap = VoxelMap,
-            Counters = Counters,
-        };
-        VoxelMapAccess = countBlockTypes.Schedule(VoxelMap.Length, 1);
+        await _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
-        await VoxelMapAccess;
-        CountBlocks[0] = 0;
-        CountBlocks[1] = 0;
-        for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
-        {
-            int threadOffset = i * JobsUtility.CacheLineSize;
-            CountBlocks[0] += Counters[threadOffset];
-            CountBlocks[1] += Counters[threadOffset + 1];
-        }
-    }
+        if (RequestingStop) return false;
 
-    private void ResizeFacesData()
-    {
-        FacesData.AllFaces.Clear();
-        FacesData.SolidFaces.Clear();
-        FacesData.TransparentFaces.Clear();
-        FacesData.SolidOffset.Value = 0;
+        _holder.ResizeFacesData();
 
-        FacesData.AllFaces.Capacity = (CountBlocks[0] + CountBlocks[1]) * 6;
-        FacesData.SolidFaces.Capacity = CountBlocks[0] * 6;
-        FacesData.TransparentFaces.Capacity = CountBlocks[1] * 6;
-    }
+        VoxelMapAccess = await _holder.SortVoxels(VoxelMapAccess, VoxelMap);
 
-    async UniTask SortVoxels()
-    {
-        await VoxelMapAccess;
-        // TODO add neighbours
-        JobHandle access = FillNeighbours(out Neighbours neighbours);
-        MeshBuilder.SortVoxelFacesJob sortVoxelsJob = new()
-        {
-            Data = World.VoxelData,
-            ChunkNeighbours = neighbours,
-            ChunkPos = ChunkPos,
-            VoxelMap = VoxelMap,
-            Blocks = World.Blocks,
-            XYZMap = World.XYZMap,
+        if (RequestingStop) return false;
 
-            SolidFaces = FacesData.SolidFaces.AsParallelWriter(),
-            TransparentFaces = FacesData.TransparentFaces.AsParallelWriter(),
-        };
-        VoxelMapAccess = sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, access);
-    }
+        await _holder.ResizeMeshData(VoxelMapAccess);
 
-    JobHandle FillNeighbours(out Neighbours neighbours)
-    {
-        NativeList<JobHandle> accesses = new(4, Allocator.Temp);
+        await _holder.FillMeshData();
 
-        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Back]), out Chunk chunk))
-        {
-            neighbours.Back = chunk.VoxelMap;
-            accesses.Add(chunk.VoxelMapAccess);
-        }
-        else
-        {
-            neighbours.Back = World.DummyMap;
-        }
-        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Front]), out chunk))
-        {
-            neighbours.Front = chunk.VoxelMap;
-            accesses.Add(chunk.VoxelMapAccess);
-        }
-        else
-        {
-            neighbours.Front = World.DummyMap;
-        }
-        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Left]), out chunk))
-        {
-            neighbours.Left = chunk.VoxelMap;
-            accesses.Add(chunk.VoxelMapAccess);
-        }
-        else
-        {
-            neighbours.Left = World.DummyMap;
-        }
-        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Right]), out chunk))
-        {
-            neighbours.Right = chunk.VoxelMap;
-            accesses.Add(chunk.VoxelMapAccess);
-        }
-        else
-        {
-            neighbours.Right = World.DummyMap;
-        }
+        if (RequestingStop) return false;
 
-        return JobHandle.CombineDependencies(accesses.AsArray());
-    }
-
-    Vector3Int ToVInt3(int3 v) => new(v.x, v.y, v.z);
-
-    async UniTask ResizeMeshData()
-    {
-        await VoxelMapAccess;
-
-        int allFacesCount = FacesData.SolidFaces.Length + FacesData.TransparentFaces.Length;
-
-        FacesData.AllFaces.Clear();
-
-        FacesData.AllFaces.CopyFrom(FacesData.SolidFaces);
-        FacesData.AllFaces.AddRangeNoResize(FacesData.TransparentFaces);
-
-        MeshData.Vertices.ResizeUninitialized(allFacesCount * 4);
-        MeshData.SolidIndices.ResizeUninitialized(FacesData.SolidFaces.Length * 6);
-        MeshData.TransparentIndices.ResizeUninitialized(FacesData.TransparentFaces.Length * 6);
-
-        FacesData.SolidOffset.Value = FacesData.SolidFaces.Length * 4;
-
-        int2 minmaxSolid = new()
-        {
-            x = 0,
-            y = (FacesData.SolidFaces.Length - 1) * 4 + 3
-        };
-        int transparentLen = (FacesData.TransparentFaces.Length > 0) ? (FacesData.TransparentFaces.Length - 1) * 4 + 3 : 0;
-        int2 minmaxTransparent = new()
-        {
-            x = FacesData.SolidOffset.Value,
-            y = FacesData.SolidOffset.Value + transparentLen
-        };
-
-        MeshData.VerticesRanges[0] = minmaxSolid;
-        MeshData.VerticesRanges[1] = minmaxTransparent;
-    }
-
-    JobHandle FillMeshData()
-    {
-        MeshBuilder.FillVerticesJob fillVerticesJob = new()
-        {
-            Data = World.VoxelData,
-            AllFaces = FacesData.AllFaces.AsArray(),
-            Vertices = MeshData.Vertices.AsArray(),
-        };
-        JobHandle fillVerticesHandle = fillVerticesJob.Schedule(FacesData.AllFaces.Length, 8);
-
-        MeshBuilder.FillSolidIndicesJob fillSolidJob = new()
-        {
-            SolidFaces = FacesData.SolidFaces.AsArray(),
-            SolidIndices = MeshData.SolidIndices.AsArray(),
-        };
-        JobHandle fillSolidHandle = fillSolidJob.Schedule(FacesData.SolidFaces.Length, 8);
-
-        MeshBuilder.FillTransparentIndicesJob fillTransparentJob = new()
-        {
-            SolidOffset = FacesData.SolidOffset,
-            TransparentFaces = FacesData.TransparentFaces.AsArray(),
-            TransparentIndices = MeshData.TransparentIndices.AsArray(),
-        };
-        JobHandle fillTransparentHandle = fillTransparentJob.Schedule(FacesData.TransparentFaces.Length, 8);
-
-        return JobHandle.CombineDependencies(fillVerticesHandle, fillSolidHandle, fillTransparentHandle);
-    }
-
-    void BuildMesh()
-    {
-        ChunkMesh.Clear();
-
-        Bounds bounds = new(
-            new(Data.ChunkWidth / 2f, Data.ChunkHeight / 2, Data.ChunkLength / 2),
-            new(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f)
-        );
-
-        var layout = new NativeArray<VertexAttributeDescriptor>(3, Allocator.Temp);
-        layout[0] = new(VertexAttribute.Position, VertexAttributeFormat.Float32, 3);
-        layout[1] = new(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3);
-        layout[2] = new(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2);
-
-        ChunkMesh.SetVertexBufferParams(MeshData.Vertices.Length, layout);
-        ChunkMesh.SetVertexBufferData(MeshData.Vertices.AsArray(), 0, 0, MeshData.Vertices.Length, 0, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
-
-        ChunkMesh.SetIndexBufferParams(MeshData.SolidIndices.Length + MeshData.TransparentIndices.Length, IndexFormat.UInt32);
-        ChunkMesh.SetIndexBufferData(MeshData.SolidIndices.AsArray(),   /**/0, 0,               /**/MeshData.SolidIndices.Length, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
-        ChunkMesh.SetIndexBufferData(MeshData.TransparentIndices.AsArray(), 0, MeshData.SolidIndices.Length, MeshData.TransparentIndices.Length, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
-
-        var meshDesc = new SubMeshDescriptor()
-        {
-            indexStart = 0,
-            indexCount = MeshData.SolidIndices.Length,
-            firstVertex = MeshData.VerticesRanges[0].x,
-            vertexCount = MeshData.VerticesRanges[0].y,
-            bounds = bounds,
-        };
-        ChunkMesh.SetSubMesh(0, meshDesc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
-        ChunkMesh.subMeshCount = 2;
-
-        var tMeshDesc = new SubMeshDescriptor()
-        {
-            indexStart = MeshData.SolidIndices.Length,
-            indexCount = MeshData.TransparentIndices.Length,
-            firstVertex = MeshData.VerticesRanges[1].x,
-            vertexCount = MeshData.VerticesRanges[1].y,
-            bounds = bounds,
-        };
-
-        ChunkMesh.SetSubMesh(1, tMeshDesc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
-        ChunkMesh.bounds = bounds;
-
-        layout.Dispose();
+        _holder.BuildMesh(_chunkMesh);
         DirtyMesh = false;
+
+        return true;
     }
-}
 
-public struct MeshDataHolder
-{
 
+    //public async UniTask ApplyMod()
+    //{
+    //    NativeArray<VoxelMod> copy = new(Modifications.Length, Allocator.Persistent);
+    //    copy.CopyFrom(Modifications.AsArray());
+    //    ApplyModsJob applyModsJob = new()
+    //    {
+    //        Data = Data,
+    //        Modifications = copy,
+    //        VoxelMap = VoxelMap,
+    //    };
+    //    VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, VoxelMapAccess);
+    //    await VoxelMapAccess;
+    //    copy.Dispose();
+    //    Modifications.Clear();
+    //    //DirtyMesh = true;
+    //}
 }
 
 [BurstCompile]
@@ -515,7 +284,7 @@ public struct GenerateChunkJob : IJobParallelFor
 
     //[WriteOnly]
     //[NativeDisableContainerSafetyRestriction]
-    //public NativeList<StructureMarker>.ParallelWriter Structures;
+    public NativeList<StructureMarker>.ParallelWriter Structures;
 
     public void Execute(int i)
     {
@@ -583,7 +352,7 @@ public struct GenerateChunkJob : IJobParallelFor
                 {
                     //Debug.Log("Tree placed");
                     // TODO re
-                    //Structures.AddNoResize(new(pos, StructureType.Tree));
+                    Structures.AddNoResize(new(pos, StructureType.Tree));
                 }
             }
         }

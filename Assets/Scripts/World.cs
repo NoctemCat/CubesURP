@@ -9,6 +9,8 @@ using UnityEngine;
 
 public class World : MonoBehaviour
 {
+    public static World Instance;
+
     public VoxelData VoxelData;
     public NativeArray<BlockStruct> Blocks;
     public NativeArray<int3> XYZMap;
@@ -28,7 +30,7 @@ public class World : MonoBehaviour
     public float3 RandomXYZ => _RandomXYZ;
 
     public Dictionary<Vector3Int, Chunk> Chunks;
-    public NativeParallelHashMap<int3, NativeArray<Block>> ChunkMap;
+    //public NativeParallelHashMap<int3, NativeArray<Block>> ChunkMap;
     public NativeArray<Block> DummyMap;
 
     public NativeList<StructureMarker> Structures;
@@ -41,8 +43,13 @@ public class World : MonoBehaviour
     Vector3Int PlayerChunk;
     Vector3Int LastPlayerChunk;
 
-    private void Start()
+    private void Awake()
     {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(Instance);
+
         BlocksScObj.Init();
 
         Unity.Mathematics.Random rng = new(math.hash(new int2(RNGSeed.GetHashCode(), 0)));
@@ -57,7 +64,7 @@ public class World : MonoBehaviour
         VoxelGenCoords = WorldHelper.InitViewCoords(VoxelData.ViewDistanceInChunks + 1);
 
         Chunks = new(ViewCoords.Count);
-        ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
+        //ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
         DummyMap = new(VoxelData.ChunkSize, Allocator.Persistent, NativeArrayOptions.ClearMemory);
         Structures = new NativeList<StructureMarker>(10000, Allocator.Persistent);
 
@@ -79,15 +86,15 @@ public class World : MonoBehaviour
         XYZMap.Dispose();
         Biome.Dispose();
 
-        ChunkMap.Dispose();
+        //ChunkMap.Dispose();
         DummyMap.Dispose();
         Structures.Dispose();
     }
 
-    public void AddChunkVoxelMap(int3 chunk, NativeArray<Block> voxelMap)
-    {
-        ChunkMap[chunk] = voxelMap;
-    }
+    //public void AddChunkVoxelMap(int3 chunk, NativeArray<Block> voxelMap)
+    //{
+    //    ChunkMap[chunk] = voxelMap;
+    //}
 
     public Chunk GetChunkFromVector3(Vector3Int pos)
     {
@@ -132,7 +139,8 @@ public class World : MonoBehaviour
             Vector3Int checkCoord = PlayerChunk + coord;
             if (!Chunks.ContainsKey(checkCoord))
             {
-                var chunk = new Chunk(this, checkCoord);
+
+                var chunk = new Chunk(checkCoord);
                 Chunks[checkCoord] = chunk;
             }
         }
@@ -182,7 +190,7 @@ public class World : MonoBehaviour
             else
             {
                 var copy = dict[checkCoord].ToNativeArray(Allocator.Persistent);
-                chunk = new Chunk(this, checkCoord);
+                chunk = new Chunk(checkCoord);
                 Chunks[checkCoord] = chunk;
                 chunk.Modifications.AddRange(copy);
                 copy.Dispose();
