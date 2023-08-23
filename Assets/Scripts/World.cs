@@ -19,8 +19,7 @@ public class World : MonoBehaviour
     public NativeArray<int3> XYZMap;
     public BiomeStruct Biome;
 
-    [SerializeField]
-    private BlockDictionary BlocksScObj;
+    public BlockDictionary BlocksScObj;
     [SerializeField]
     private BiomeAttributes BiomeScObj;
     public string RNGSeed;
@@ -44,7 +43,7 @@ public class World : MonoBehaviour
 
     List<Chunk> ActiveChunks;
 
-    Vector3Int PlayerChunk;
+    public Vector3Int PlayerChunk;
     Vector3Int LastPlayerChunk;
 
     //float SinceLastStructureUpdate;
@@ -118,6 +117,10 @@ public class World : MonoBehaviour
     public Chunk GetChunkFromVector3(Vector3Int pos)
     {
         return Chunks[pos];
+    }
+    public Chunk GetChunkFromVector3(Vector3 worldPos)
+    {
+        return Chunks[GetChunkCoordFromVector3(worldPos)];
     }
 
     private void Update()
@@ -262,18 +265,25 @@ public class World : MonoBehaviour
         return new(x, y, z);
     }
 
-    private int3 GetPosInChunkFromVector3(Vector3Int chunkPos, int3 worldPos)
+    public int3 GetPosInChunkFromVector3(int3 chunkPos, Vector3 worldPos)
+    {
+        int x = (int)(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
+        int y = (int)(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
+        int z = (int)(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
+        return new(x, y, z);
+    }
+    public int3 GetPosInChunkFromVector3(Vector3Int chunkPos, int3 worldPos)
     {
         int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
         int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
         int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
         return new(x, y, z);
     }
-    private int3 GetPosInChunkFromVector3(Vector3Int chunkPos, Vector3 worldPos)
+    public int3 GetPosInChunkFromVector3(Vector3Int chunkPos, Vector3 worldPos)
     {
-        int x = Mathf.FloorToInt(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
-        int y = Mathf.FloorToInt(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
-        int z = Mathf.FloorToInt(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
+        int x = (int)(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
+        int y = (int)(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
+        int z = (int)(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
         return new(x, y, z);
     }
 

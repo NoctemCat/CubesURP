@@ -74,27 +74,32 @@ public class Player : MonoBehaviour
     //    mouse.y = value.Get<float>();
     //}
 
-    //private void OnDestroyBlock(InputValue value) {
-    //    if (world != null && highlightBlock.gameObject.activeSelf && value.isPressed) {
-    //        world.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
-    //    }
-    //}
+    private void OnDestroyBlock(InputValue value)
+    {
+        if (World != null && highlightBlock.gameObject.activeSelf && value.isPressed)
+        {
+            World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
+        }
+    }
 
-    //private void OnPlaceBlock(InputValue value) {
-    //    if (placeBlock.gameObject.activeSelf && value.isPressed) {
-    //        int xSelf = Mathf.FloorToInt(transform.position.x);
-    //        int ySelf = Mathf.FloorToInt(transform.position.y);
-    //        int zSelf = Mathf.FloorToInt(transform.position.z);
+    private void OnPlaceBlock(InputValue value)
+    {
+        if (placeBlock.gameObject.activeSelf && value.isPressed)
+        {
+            int xSelf = Mathf.FloorToInt(transform.position.x);
+            int ySelf = Mathf.FloorToInt(transform.position.y);
+            int zSelf = Mathf.FloorToInt(transform.position.z);
 
-    //        int xBlock = Mathf.FloorToInt(placeBlock.position.x);
-    //        int yBlock = Mathf.FloorToInt(placeBlock.position.y);
-    //        int zBlock = Mathf.FloorToInt(placeBlock.position.z);
+            int xBlock = Mathf.FloorToInt(placeBlock.position.x);
+            int yBlock = Mathf.FloorToInt(placeBlock.position.y);
+            int zBlock = Mathf.FloorToInt(placeBlock.position.z);
 
-    //        if (!(xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock)) {
-    //            world.GetChunkFromVector3(placeBlock.position).EditVoxel(placeBlock.position, selectedBlockIndex);
-    //        }
-    //    }
-    //}
+            if (!(xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock))
+            {
+                World.GetChunkFromVector3(placeBlock.position).EditVoxel(placeBlock.position, selectedBlockIndex);
+            }
+        }
+    }
 
     private void OnJump(InputValue value)
     {
@@ -113,7 +118,7 @@ public class Player : MonoBehaviour
         //camera = GameObject.Find("Main Camera").transform;
         camera = Camera.main.transform;
 
-        World = GameObject.Find("World").GetComponent<World>();
+        World = World.Instance;
 
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -126,7 +131,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        //PlaceCursorBlock();
+        PlaceCursorBlock();
 
         float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
         float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
@@ -168,57 +173,65 @@ public class Player : MonoBehaviour
 
     }
 
-    //private void PlaceCursorBlock() {
-    //    Vector3 lastPos = new();
+    private void PlaceCursorBlock()
+    {
+        Vector3 lastPos = new();
 
-    //    for (float step = checkIncrement; step < reach; step += checkIncrement) {
-    //        Vector3 pos = camera.position + (camera.forward * step);
+        for (float step = checkIncrement; step < reach; step += checkIncrement)
+        {
+            Vector3 pos = camera.position + (camera.forward * step);
 
-    //        if (world.CheckForVoxel(pos)) {
-    //            highlightBlock.position = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
-    //            //placeBlock.position = lastPos;
+            if (World.CheckForVoxel(pos))
+            {
+                highlightBlock.position = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
+                //placeBlock.position = lastPos;
 
-    //            float xCheck = pos.x % 1;
-    //            if (xCheck > 0.5f)
-    //                xCheck--;
-    //            float yCheck = pos.y % 1;
-    //            if (yCheck > 0.5f)
-    //                yCheck--;
-    //            float zCheck = pos.z % 1;
-    //            if (zCheck > 0.5f)
-    //                zCheck--;
+                float xCheck = pos.x % 1;
+                if (xCheck > 0.5f)
+                    xCheck--;
+                float yCheck = pos.y % 1;
+                if (yCheck > 0.5f)
+                    yCheck--;
+                float zCheck = pos.z % 1;
+                if (zCheck > 0.5f)
+                    zCheck--;
 
-    //            if (Mathf.Abs(xCheck) < Mathf.Abs(yCheck) && Mathf.Abs(xCheck) < Mathf.Abs(zCheck)) {
-    //                // place block on x axis
-    //                if (xCheck < 0)
-    //                    placeBlock.position = highlightBlock.position + Vector3.right;
-    //                else
-    //                    placeBlock.position = highlightBlock.position + Vector3.left;
-    //            } else if (Mathf.Abs(zCheck) < Mathf.Abs(yCheck) && Mathf.Abs(zCheck) < Mathf.Abs(xCheck)) {
-    //                // place block on z axis
-    //                if (zCheck < 0)
-    //                    placeBlock.position = highlightBlock.position + Vector3.forward;
-    //                else
-    //                    placeBlock.position = highlightBlock.position + Vector3.back;
-    //            } else {
-    //                // place block on y axis by default
-    //                if (yCheck < 0)
-    //                    placeBlock.position = highlightBlock.position + Vector3.up;
-    //                else
-    //                    placeBlock.position = highlightBlock.position + Vector3.down;
-    //            }
+                if (Mathf.Abs(xCheck) < Mathf.Abs(yCheck) && Mathf.Abs(xCheck) < Mathf.Abs(zCheck))
+                {
+                    // place block on x axis
+                    if (xCheck < 0)
+                        placeBlock.position = highlightBlock.position + Vector3.right;
+                    else
+                        placeBlock.position = highlightBlock.position + Vector3.left;
+                }
+                else if (Mathf.Abs(zCheck) < Mathf.Abs(yCheck) && Mathf.Abs(zCheck) < Mathf.Abs(xCheck))
+                {
+                    // place block on z axis
+                    if (zCheck < 0)
+                        placeBlock.position = highlightBlock.position + Vector3.forward;
+                    else
+                        placeBlock.position = highlightBlock.position + Vector3.back;
+                }
+                else
+                {
+                    // place block on y axis by default
+                    if (yCheck < 0)
+                        placeBlock.position = highlightBlock.position + Vector3.up;
+                    else
+                        placeBlock.position = highlightBlock.position + Vector3.down;
+                }
 
-    //            highlightBlock.gameObject.SetActive(true);
-    //            placeBlock.gameObject.SetActive(true);
+                highlightBlock.gameObject.SetActive(true);
+                placeBlock.gameObject.SetActive(true);
 
-    //            return;
-    //        }
-    //        lastPos = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
-    //    }
+                return;
+            }
+            lastPos = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
+        }
 
-    //    highlightBlock.gameObject.SetActive(false);
-    //    placeBlock.gameObject.SetActive(false);
-    //}
+        highlightBlock.gameObject.SetActive(false);
+        placeBlock.gameObject.SetActive(false);
+    }
 
     private float CheckDownSpeed(float downSpeed)
     {

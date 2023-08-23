@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
@@ -189,6 +190,11 @@ public class Chunk
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
         Modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
+    }
+
+    public void EditVoxel(Vector3 position, Block block)
+    {
+        AddModification(new(World.Instance.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
     }
 
     async UniTaskVoid StartGenerating()
