@@ -1,7 +1,3 @@
-
-using System;
-using System.Runtime.InteropServices;
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
 using Unity.Collections;
@@ -102,7 +98,7 @@ public class Chunk
 
     //UniTask GenTask;
 
-    JobHandle VoxelMapGen;
+    JobHandle VoxelMapAccess;
 
     JobHandle FillingMods;
 
@@ -138,7 +134,7 @@ public class Chunk
         DirtyMesh = false;
 
         //GenTask = 
-        StartGenerating().Forget();
+        StartGenerating();
     }
 
     ~Chunk()
@@ -193,32 +189,32 @@ public class Chunk
         Graphics.RenderMesh(trp, ChunkMesh, 1, Matrix4x4.Translate(WorldPos));
     }
 
-    async UniTaskVoid StartGenerating()
+    void StartGenerating()
     {
-        VoxelMapGen = GenerateVoxelMap();
-        await VoxelMapGen;
+        GenerateVoxelMap();
+        //await VoxelMapAccess;
         //VoxelMapReady = true;
         DirtyMesh = true;
         World.AddChunkVoxelMap(ChunkPos, VoxelMap);
         //StartMeshGen();
     }
 
-    public async UniTask ApplyMod()
-    {
-        NativeArray<VoxelMod> copy = new(Modifications.Length, Allocator.Persistent);
-        copy.CopyFrom(Modifications.AsArray());
-        ApplyModsJob applyModsJob = new()
-        {
-            Data = Data,
-            Modifications = copy,
-            VoxelMap = VoxelMap,
-        };
-        VoxelMapGen = applyModsJob.Schedule(Modifications.Length, 1, VoxelMapGen);
-        await VoxelMapGen;
-        copy.Dispose();
-        Modifications.Clear();
-        //DirtyMesh = true;
-    }
+    //public async UniTask ApplyMod()
+    //{
+    //    NativeArray<VoxelMod> copy = new(Modifications.Length, Allocator.Persistent);
+    //    copy.CopyFrom(Modifications.AsArray());
+    //    ApplyModsJob applyModsJob = new()
+    //    {
+    //        Data = Data,
+    //        Modifications = copy,
+    //        VoxelMap = VoxelMap,
+    //    };
+    //    VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, VoxelMapAccess);
+    //    await VoxelMapAccess;
+    //    copy.Dispose();
+    //    Modifications.Clear();
+    //    //DirtyMesh = true;
+    //}
 
     public async UniTaskVoid StartMeshGen()
     {
@@ -245,8 +241,8 @@ public class Chunk
 
     async UniTask<bool> GenerateMesh()
     {
-        if (Modifications.Length > 0)
-            await ApplyMod();
+        //if (Modifications.Length > 0)
+        //    await ApplyMod();
 
         await CountBlockTypes();
 
@@ -258,7 +254,7 @@ public class Chunk
 
         if (RequestingStop) return true;
 
-        ResizeMeshData();
+        await ResizeMeshData();
 
         await FillMeshData();
 
@@ -269,7 +265,7 @@ public class Chunk
         return false;
     }
 
-    JobHandle GenerateVoxelMap()
+    void GenerateVoxelMap()
     {
         GenerateChunkJob generateChunk = new()
         {
@@ -279,9 +275,9 @@ public class Chunk
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
-            Structures = World.Structures.AsParallelWriter(),
+            //Structures = World.Structures.AsParallelWriter(),
         };
-        return generateChunk.Schedule(VoxelMap.Length, 8, VoxelMapGen);
+        VoxelMapAccess = generateChunk.Schedule(VoxelMap.Length, 8);
     }
 
     async UniTask CountBlockTypes()
@@ -293,15 +289,16 @@ public class Chunk
             Counters[threadOffset + 1] = 0;
         }
 
+        await VoxelMapAccess;
         MeshBuilder.CountBlockTypesJob countBlockTypes = new()
         {
             Blocks = World.Blocks,
             VoxelMap = VoxelMap,
             Counters = Counters,
         };
-        VoxelMapGen = countBlockTypes.Schedule(VoxelMap.Length, 1, VoxelMapGen);
-        await VoxelMapGen;
+        VoxelMapAccess = countBlockTypes.Schedule(VoxelMap.Length, 1);
 
+        await VoxelMapAccess;
         CountBlocks[0] = 0;
         CountBlocks[1] = 0;
         for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
@@ -324,13 +321,15 @@ public class Chunk
         FacesData.TransparentFaces.Capacity = CountBlocks[1] * 6;
     }
 
-    JobHandle SortVoxels()
+    async UniTask SortVoxels()
     {
-
+        await VoxelMapAccess;
+        // TODO add neighbours
+        JobHandle access = FillNeighbours(out Neighbours neighbours);
         MeshBuilder.SortVoxelFacesJob sortVoxelsJob = new()
         {
             Data = World.VoxelData,
-            ChunkNeighbours = FillNeighbours(),
+            ChunkNeighbours = neighbours,
             ChunkPos = ChunkPos,
             VoxelMap = VoxelMap,
             Blocks = World.Blocks,
@@ -339,35 +338,59 @@ public class Chunk
             SolidFaces = FacesData.SolidFaces.AsParallelWriter(),
             TransparentFaces = FacesData.TransparentFaces.AsParallelWriter(),
         };
-        VoxelMapGen = sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, VoxelMapGen);
-        return VoxelMapGen;
+        VoxelMapAccess = sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, access);
     }
 
-    Neighbours FillNeighbours()
+    JobHandle FillNeighbours(out Neighbours neighbours)
     {
-        Neighbours neighbours;
-        if (World.ChunkMap.TryGetValue(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Back], out NativeArray<Block> voxelMap))
-            neighbours.Back = voxelMap;
+        NativeList<JobHandle> accesses = new(4, Allocator.Temp);
+
+        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Back]), out Chunk chunk))
+        {
+            neighbours.Back = chunk.VoxelMap;
+            accesses.Add(chunk.VoxelMapAccess);
+        }
         else
+        {
             neighbours.Back = World.DummyMap;
-        if (World.ChunkMap.TryGetValue(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Front], out voxelMap))
-            neighbours.Front = voxelMap;
+        }
+        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Front]), out chunk))
+        {
+            neighbours.Front = chunk.VoxelMap;
+            accesses.Add(chunk.VoxelMapAccess);
+        }
         else
+        {
             neighbours.Front = World.DummyMap;
-        if (World.ChunkMap.TryGetValue(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Left], out voxelMap))
-            neighbours.Left = voxelMap;
+        }
+        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Left]), out chunk))
+        {
+            neighbours.Left = chunk.VoxelMap;
+            accesses.Add(chunk.VoxelMapAccess);
+        }
         else
+        {
             neighbours.Left = World.DummyMap;
-        if (World.ChunkMap.TryGetValue(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Right], out voxelMap))
-            neighbours.Right = voxelMap;
+        }
+        if (World.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Right]), out chunk))
+        {
+            neighbours.Right = chunk.VoxelMap;
+            accesses.Add(chunk.VoxelMapAccess);
+        }
         else
+        {
             neighbours.Right = World.DummyMap;
+        }
 
-        return neighbours;
+        return JobHandle.CombineDependencies(accesses.AsArray());
     }
 
-    void ResizeMeshData()
+    Vector3Int ToVInt3(int3 v) => new(v.x, v.y, v.z);
+
+    async UniTask ResizeMeshData()
     {
+        await VoxelMapAccess;
+
         int allFacesCount = FacesData.SolidFaces.Length + FacesData.TransparentFaces.Length;
 
         FacesData.AllFaces.Clear();
@@ -491,9 +514,9 @@ public struct GenerateChunkJob : IJobParallelFor
     //[NativeDisableContainerSafetyRestriction]
     public NativeArray<Block> VoxelMap;
 
-    [WriteOnly]
-    [NativeDisableContainerSafetyRestriction]
-    public NativeList<StructureMarker>.ParallelWriter Structures;
+    //[WriteOnly]
+    //[NativeDisableContainerSafetyRestriction]
+    //public NativeList<StructureMarker>.ParallelWriter Structures;
 
     public void Execute(int i)
     {
@@ -560,7 +583,8 @@ public struct GenerateChunkJob : IJobParallelFor
                 if (Get2DPerlin(new float2(pos.x, pos.z), 1250, Biome.TreePlacementScale) > Biome.TreePlacementThreshold)
                 {
                     //Debug.Log("Tree placed");
-                    Structures.AddNoResize(new(pos, StructureType.Tree));
+                    // TODO re
+                    //Structures.AddNoResize(new(pos, StructureType.Tree));
                 }
             }
         }

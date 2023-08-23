@@ -10,9 +10,9 @@ public static class VoxelDataStatic
     public static int ChunkHeight = 128;
     public static int ChunkLength = 16;
     public static int ChunkSize = ChunkWidth * ChunkHeight * ChunkLength;
-    public static int WorldSizeInChunks = 100;
+    public static int WorldSizeInChunks = 200;
     public static int WorldSizeInVoxels = WorldSizeInChunks * ChunkWidth;
-    public static int ViewDistanceInChunks = 6;
+    public static int ViewDistanceInChunks = 10;
 
     public static int TextureAtlasSizeInBlocks = 16;
     public static float NormalizedBlockTextureSize => 1.0f / TextureAtlasSizeInBlocks;

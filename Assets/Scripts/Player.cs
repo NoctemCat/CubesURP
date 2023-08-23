@@ -146,23 +146,23 @@ public class Player : MonoBehaviour
             isGrounded = false;
         }
 
-        if (verticalMomentum > gravity)
-            verticalMomentum += Time.fixedDeltaTime * gravity;
+        //if (verticalMomentum > gravity)
+        //    verticalMomentum += Time.fixedDeltaTime * gravity;
 
         float moveSpeed = (!isSprinting) ? walkSpeed : sprintSpeed;
         velocity = moveSpeed * Time.fixedDeltaTime * ((transform.forward * movement.y) + (transform.right * movement.x));
 
         velocity += Time.fixedDeltaTime * verticalMomentum * Vector3.up;
 
-        if ((velocity.z > 0f && Front) || (velocity.z < 0f && Back))
-            velocity.z = 0f;
-        if ((velocity.x > 0f && Right) || (velocity.x < 0f && Left))
-            velocity.x = 0f;
+        //if ((velocity.z > 0f && Front) || (velocity.z < 0f && Back))
+        //    velocity.z = 0f;
+        //if ((velocity.x > 0f && Right) || (velocity.x < 0f && Left))
+        //    velocity.x = 0f;
 
-        if (velocity.y < 0f)
-            velocity.y = CheckDownSpeed(velocity.y);
-        else if (velocity.y > 0f)
-            velocity.y = CheckUpSpeed(velocity.y);
+        //if (velocity.y < 0f)
+        //    velocity.y = CheckDownSpeed(velocity.y);
+        //else if (velocity.y > 0f)
+        //    velocity.y = CheckUpSpeed(velocity.y);
 
     }
 

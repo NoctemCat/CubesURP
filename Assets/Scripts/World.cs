@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
@@ -126,20 +127,23 @@ public class World : MonoBehaviour
         }
         ActiveChunks.Clear();
 
+        foreach (var coord in VoxelGenCoords)
+        {
+            Vector3Int checkCoord = PlayerChunk + coord;
+            if (!Chunks.ContainsKey(checkCoord))
+            {
+                var chunk = new Chunk(this, checkCoord);
+                Chunks[checkCoord] = chunk;
+            }
+        }
+
         foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
-            if (Chunks.TryGetValue(checkCoord, out Chunk chunk))
-            {
-                ActiveChunks.Add(chunk);
-            }
-            else
-            {
-                var c = new Chunk(this, checkCoord);
-                ActiveChunks.Add(c);
-                Chunks[checkCoord] = c;
-            }
+            ActiveChunks.Add(Chunks[checkCoord]);
         }
+
+        JobHandle.ScheduleBatchedJobs();
     }
 
     async UniTaskVoid SortStructures()
