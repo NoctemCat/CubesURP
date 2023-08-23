@@ -133,7 +133,6 @@ public class Chunk
 
         DirtyMesh = false;
 
-        //GenTask = 
         StartGenerating();
     }
 
@@ -156,7 +155,6 @@ public class Chunk
 
         if (Modifications.Length > 0 && !IsGeneratingMesh && !DirtyMesh)
         {
-            //ApplyMod().Forget();
             DirtyMesh = true;
         }
 
@@ -222,18 +220,15 @@ public class Chunk
         {
             IsGeneratingMesh = true;
 
-            //if (!VoxelMapReady && !GenTask.GetAwaiter().IsCompleted)
-            //    await GenTask;
-
-            var isCanceled = await GenerateMesh();
-            if (isCanceled)
+            var isFinished = await GenerateMesh();
+            if (isFinished)
             {
-                RequestingStop = false;
+                IsMeshDrawable = true;
                 IsGeneratingMesh = false;
             }
             else
             {
-                IsMeshDrawable = true;
+                RequestingStop = false;
                 IsGeneratingMesh = false;
             }
         }
@@ -246,23 +241,23 @@ public class Chunk
 
         await CountBlockTypes();
 
-        if (RequestingStop) return true;
+        if (RequestingStop) return false;
 
         ResizeFacesData();
 
         await SortVoxels();
 
-        if (RequestingStop) return true;
+        if (RequestingStop) return false;
 
         await ResizeMeshData();
 
         await FillMeshData();
 
-        if (RequestingStop) return true;
+        if (RequestingStop) return false;
 
         BuildMesh();
 
-        return false;
+        return true;
     }
 
     void GenerateVoxelMap()
@@ -451,7 +446,7 @@ public class Chunk
     void BuildMesh()
     {
         ChunkMesh.Clear();
-        //ChunkMesh.
+
         Bounds bounds = new(
             new(Data.ChunkWidth / 2f, Data.ChunkHeight / 2, Data.ChunkLength / 2),
             new(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f)
@@ -480,7 +475,6 @@ public class Chunk
         ChunkMesh.SetSubMesh(0, meshDesc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
         ChunkMesh.subMeshCount = 2;
 
-
         var tMeshDesc = new SubMeshDescriptor()
         {
             indexStart = MeshData.SolidIndices.Length,
@@ -496,6 +490,11 @@ public class Chunk
         layout.Dispose();
         DirtyMesh = false;
     }
+}
+
+public struct MeshDataHolder
+{
+
 }
 
 [BurstCompile]
