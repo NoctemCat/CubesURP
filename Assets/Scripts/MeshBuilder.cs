@@ -248,10 +248,11 @@ static class MeshBuilder
                     int fi = (int)f;
                     int3 neighbourPos = pos + Data.FaceChecks[fi];
 
-                    bool neighbourTransparent = CheckVoxelTransparent(neighbourPos, f);
+                    //bool neighbourTransparent = CheckVoxelTransparent(neighbourPos, f);
+                    Block neighbour = GetNeighbour(neighbourPos, f);
 
                     // These faces will be drawn
-                    if (neighbourTransparent)
+                    if (Blocks[(int)neighbour].isTransparent && neighbour != VoxelMap[i])
                     {
                         if (!current.isTransparent)
                             SolidFaces.AddNoResize(new(pos, f, current));
@@ -297,6 +298,42 @@ static class MeshBuilder
             }
 
             return Blocks[(int)VoxelMap[CalcIndex(pos)]].isTransparent;
+        }
+
+        Block GetNeighbour(int3 pos, VoxelFaces face)
+        {
+            if (!IsVoxelInChunk(pos))
+            {
+                NativeArray<Block> voxelMap;
+                switch (face)
+                {
+                    case VoxelFaces.Back:
+                        pos.z = Data.ChunkWidth - 1;
+                        voxelMap = ChunkNeighbours.Back;
+                        break;
+                    case VoxelFaces.Front:
+                        pos.z = 0;
+                        voxelMap = ChunkNeighbours.Front;
+                        break;
+                    case VoxelFaces.Left:
+                        pos.x = Data.ChunkLength - 1;
+                        voxelMap = ChunkNeighbours.Left;
+                        break;
+                    case VoxelFaces.Right:
+                        pos.x = 0;
+                        voxelMap = ChunkNeighbours.Right;
+                        break;
+                    case VoxelFaces.Top:
+                    case VoxelFaces.Bottom:
+                    case VoxelFaces.Max:
+                    default:
+                        return Block.Air;
+                }
+
+                return voxelMap[CalcIndex(pos)];
+            }
+
+            return VoxelMap[CalcIndex(pos)];
         }
 
 

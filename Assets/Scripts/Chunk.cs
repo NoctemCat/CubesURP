@@ -339,10 +339,11 @@ public struct GenerateChunkJob : IJobParallelFor
     public Block GetVoxel(int3 chunkPos, int3 pos)
     {
         // IMMUTABLE PASS
-        if (pos.y == 0)
-            return Block.Bedrock;
+        //if (pos.y == 0)
+        //    return Block.Bedrock;
 
         // BASIC TERRAIN PASSS
+        //Debug.Log($"{chunkPos.x}, {chunkPos.y}, {chunkPos.z}");
         int terrainHeight = (int)(math.floor(Biome.MaxTerrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biome.TerrainScale)) + Biome.SolidGroundHeight);
 
         Block voxelValue;

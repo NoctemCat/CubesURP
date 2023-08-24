@@ -76,7 +76,7 @@ public class World : MonoBehaviour
 
         ActiveChunks = new(10);
 
-        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, VoxelData.ChunkHeight - 50, VoxelData.ChunkLength / 2);
+        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 100, VoxelData.ChunkLength / 2);
 
         LastPlayerChunk = new(-1000, -1000, -1000);
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);

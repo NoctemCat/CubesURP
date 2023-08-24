@@ -55,11 +55,15 @@ public static class WorldHelper
         List<Vector3Int> check = new();
         for (int x = -viewDistanceInChunks; x <= viewDistanceInChunks; x++)
         {
-            for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
+            //for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
+            for (int y = 0; y <= 0; y++)
             {
-                if (math.sqrt(x * x + y * y) <= viewDistanceInChunks)
+                for (int z = -viewDistanceInChunks; z <= viewDistanceInChunks; z++)
                 {
-                    check.Add(new(x, 0, y));
+                    //if (math.sqrt(x * x + y * y + z * z) <= viewDistanceInChunks)
+                    //{
+                    //}
+                    check.Add(new(x, y, z));
                 }
             }
         }
