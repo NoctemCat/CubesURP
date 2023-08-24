@@ -23,6 +23,11 @@ public struct MeshDataHolder
 
     NativeArray<VertexAttributeDescriptor> _layout;
 
+    /// <summary>
+    /// Can only be called after CountBlockTypes
+    /// </summary>
+    public bool IsEmpty => CountBlocks[2] == 0;
+
     public void Init(int3 chunkPos)
     {
         Data = World.Instance.VoxelData;
@@ -36,7 +41,7 @@ public struct MeshDataHolder
         _layout[1] = new(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3);
         _layout[2] = new(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2);
 
-        CountBlocks = new(2, Allocator.Persistent);
+        CountBlocks = new(64, Allocator.Persistent);
         Counters = new(JobsUtility.MaxJobThreadCount * JobsUtility.CacheLineSize, Allocator.Persistent);
     }
 
@@ -70,11 +75,13 @@ public struct MeshDataHolder
         await voxelMapAccess;
         CountBlocks[0] = 0;
         CountBlocks[1] = 0;
+        CountBlocks[2] = 0;
         for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
         {
             int threadOffset = i * JobsUtility.CacheLineSize;
             CountBlocks[0] += Counters[threadOffset];
             CountBlocks[1] += Counters[threadOffset + 1];
+            CountBlocks[2] += Counters[threadOffset + 2];
         }
     }
 

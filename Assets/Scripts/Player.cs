@@ -113,6 +113,11 @@ public class Player : MonoBehaviour
         isSprinting = value.isPressed;
     }
 
+    private void OnOpenInventory(InputValue value)
+    {
+        World.InUI = !World.InUI;
+    }
+
 #pragma warning restore IDE0051
 
     private void Start()
@@ -133,17 +138,20 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        PlaceCursorBlock();
+        if (!World.InUI)
+        {
+            PlaceCursorBlock();
 
-        float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-        float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        if (rotationY > 0)
-            angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
-        else
-            angles = new Vector3(Mathf.MoveTowards(angles.x, 90, -rotationY), angles.y + rotationX, 0);
+            float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+            float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+            if (rotationY > 0)
+                angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
+            else
+                angles = new Vector3(Mathf.MoveTowards(angles.x, 90, -rotationY), angles.y + rotationX, 0);
 
-        transform.localEulerAngles = new(0f, angles.y, 0f);
-        camera.localEulerAngles = new(angles.x, 0f, 0f);
+            transform.localEulerAngles = new(0f, angles.y, 0f);
+            camera.localEulerAngles = new(angles.x, 0f, 0f);
+        }
     }
 
 

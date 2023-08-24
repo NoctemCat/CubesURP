@@ -138,6 +138,7 @@ static class MeshBuilder
 
         // 0 = isSolid
         // 1 = isTransparent
+        // 2 = Non Empty blocks
         public void Execute(int i)
         {
             //ref var blocksVal = ref BlocksRef.Blocks.Value;
@@ -153,6 +154,10 @@ static class MeshBuilder
             else if (block.isSolid)
             {
                 Counters[threadOffset]++;
+            }
+            if (VoxelMap[i] != Block.Air)
+            {
+                Counters[threadOffset + 2]++;
             }
         }
     }

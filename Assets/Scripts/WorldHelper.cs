@@ -55,8 +55,8 @@ public static class WorldHelper
         List<Vector3Int> check = new();
         for (int x = -viewDistanceInChunks; x <= viewDistanceInChunks; x++)
         {
-            //for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
-            for (int y = 0; y <= 0; y++)
+            for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
+            //for (int y = 0; y <= 0; y++)
             {
                 for (int z = -viewDistanceInChunks; z <= viewDistanceInChunks; z++)
                 {

@@ -6,9 +6,9 @@ using UnityEngine;
 
 public static class VoxelDataStatic
 {
-    public static int ChunkWidth = 16;
-    public static int ChunkHeight = 128;
-    public static int ChunkLength = 16;
+    public static int ChunkWidth = 32;
+    public static int ChunkHeight = 32;
+    public static int ChunkLength = 32;
     public static int ChunkSize = ChunkWidth * ChunkHeight * ChunkLength;
     public static int WorldSizeInChunks = 200;
     public static int WorldSizeInVoxels = WorldSizeInChunks * ChunkWidth;

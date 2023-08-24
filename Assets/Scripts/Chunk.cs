@@ -126,6 +126,21 @@ public class Chunk
 
         _holder.Init(ChunkPos);
 
+        rp = new()
+        {
+            material = World.Instance.SolidMaterial,
+            shadowCastingMode = ShadowCastingMode.TwoSided,
+            receiveShadows = true,
+            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
+        };
+        trp = new()
+        {
+            material = World.Instance.TransparentMaterial,
+            shadowCastingMode = ShadowCastingMode.TwoSided,
+            receiveShadows = true,
+            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
+        };
+
         StartGenerating().Forget();
     }
 
@@ -154,25 +169,12 @@ public class Chunk
             RequestingStop = false;
         }
     }
+    RenderParams rp;
+    RenderParams trp;
 
     public void Draw()
     {
         if (!IsMeshDrawable) return;
-
-        RenderParams rp = new()
-        {
-            material = World.Instance.SolidMaterial,
-            shadowCastingMode = ShadowCastingMode.TwoSided,
-            receiveShadows = true,
-            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
-        };
-        RenderParams trp = new()
-        {
-            material = World.Instance.TransparentMaterial,
-            shadowCastingMode = ShadowCastingMode.TwoSided,
-            receiveShadows = true,
-            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
-        };
 
         Graphics.RenderMesh(rp, _chunkMesh, 0, Matrix4x4.Translate(WorldPos));
         Graphics.RenderMesh(trp, _chunkMesh, 1, Matrix4x4.Translate(WorldPos));
@@ -259,6 +261,7 @@ public class Chunk
             });
 
         await _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
+        if (_holder.IsEmpty) return true;
 
         if (RequestingStop) return false;
 
@@ -328,12 +331,18 @@ public struct GenerateChunkJob : IJobParallelFor
     {
         //ref var voxelData = ref VoxelDataRef.Data.Value;
         int3 scaledPos = new(
-            ChunkPos.x * Data.ChunkWidth,
-            ChunkPos.y * Data.ChunkHeight,
-            ChunkPos.z * Data.ChunkLength
+            ChunkPos.x * Data.ChunkWidth + XYZMap[i].x,
+            ChunkPos.y * Data.ChunkHeight + XYZMap[i].y,
+            ChunkPos.z * Data.ChunkLength + XYZMap[i].z
         );
 
-        VoxelMap[i] = GetVoxel(ChunkPos, scaledPos + XYZMap[i]);
+        //int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
+        //int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
+        //int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
+        // pos in chunk XYZMap[i]
+        // chunk pos ChunkPos
+
+        VoxelMap[i] = GetVoxel(ChunkPos, scaledPos);
     }
 
     public Block GetVoxel(int3 chunkPos, int3 pos)

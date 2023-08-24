@@ -41,13 +41,21 @@ public class World : MonoBehaviour
     List<Vector3Int> ViewCoords;
     List<Vector3Int> VoxelGenCoords;
 
-    List<Chunk> ActiveChunks;
+    HashSet<Chunk> ActiveChunks;
 
     public Vector3Int PlayerChunk;
-    Vector3Int LastPlayerChunk;
 
-    //float SinceLastStructureUpdate;
+    int GenerateAtOnce = 8;
 
+    private bool _inUI;
+    public bool InUI
+    {
+        get { return _inUI; }
+        set
+        {
+            _inUI = value;
+        }
+    }
     private void Awake()
     {
         if (Instance == null)
@@ -78,7 +86,7 @@ public class World : MonoBehaviour
 
         PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 100, VoxelData.ChunkLength / 2);
 
-        LastPlayerChunk = new(-1000, -1000, -1000);
+        //LastPlayerChunk = new(-1000, -1000, -1000);
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
 
         //GenerateWorld();
@@ -86,6 +94,7 @@ public class World : MonoBehaviour
         GeneratingStructures = dummy.Schedule();
 
         CheckStructures().Forget();
+        CheckDistance().Forget();
     }
 
     private void OnDestroy()
@@ -146,15 +155,6 @@ public class World : MonoBehaviour
     private void Update()
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
-        if (PlayerChunk != LastPlayerChunk)
-        {
-            CheckDistance();
-        }
-
-        //if (Structures.Length > 5)
-        //{
-
-        //}
 
         foreach (var chunk in ActiveChunks)
         {
@@ -168,17 +168,29 @@ public class World : MonoBehaviour
         while (true)
         {
             await UniTask.WaitForSeconds(1);
-            //if (!Structures.IsEmpty)
-            //{
-            //}
             SortStructures().Forget();
         }
     }
 
-    void CheckDistance()
+    async UniTaskVoid CheckDistance()
     {
-        LastPlayerChunk = PlayerChunk;
-        foreach (var chunk in ActiveChunks)
+        Vector3Int LastPlayerChunk;
+
+        while (true)
+        {
+            LastPlayerChunk = PlayerChunk;
+            while (DeactivateFarChunks() && !GenerateVoxelMaps())
+            {
+                await UniTask.WaitForSeconds(0.25f);
+                LastPlayerChunk = PlayerChunk;
+            }
+            await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk);
+        }
+    }
+
+    bool DeactivateFarChunks()
+    {
+        foreach (Chunk chunk in ActiveChunks)
         {
             Vector3Int chunkPos = new(chunk.ChunkPos.x, chunk.ChunkPos.y, chunk.ChunkPos.z);
             if ((chunkPos - PlayerChunk).sqrMagnitude > VoxelData.SqrViewDistanceInChunks)
@@ -187,7 +199,13 @@ public class World : MonoBehaviour
             }
         }
         ActiveChunks.Clear();
+        return true;
+    }
 
+    bool GenerateVoxelMaps()
+    {
+        bool allGenerated = true;
+        int toGenerate = GenerateAtOnce;
         foreach (var coord in VoxelGenCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
@@ -195,16 +213,31 @@ public class World : MonoBehaviour
             {
                 var chunk = new Chunk(checkCoord);
                 Chunks[checkCoord] = chunk;
+                toGenerate--;
+                if (toGenerate <= 0)
+                {
+                    allGenerated = false;
+                    break;
+                }
             }
         }
+        ActivateNearChunks();
+        JobHandle.ScheduleBatchedJobs();
 
+        return allGenerated;
+    }
+
+    void ActivateNearChunks()
+    {
         foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
-            ActiveChunks.Add(Chunks[checkCoord]);
+            if (Chunks.TryGetValue(checkCoord, out var chunk))
+            {
+                ActiveChunks.Add(chunk);
+            }
         }
 
-        JobHandle.ScheduleBatchedJobs();
     }
 
     async UniTaskVoid SortStructures()
