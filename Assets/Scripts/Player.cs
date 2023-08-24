@@ -11,7 +11,7 @@ public class Player : MonoBehaviour
     public bool isSprinting;
     public bool ApplyGravity = true;
 
-    private new Transform camera;
+    private Transform _mainCamera;
     private World World;
 
     Vector2 mouse = new(0f, 0f);
@@ -116,6 +116,14 @@ public class Player : MonoBehaviour
     private void OnOpenInventory(InputValue value)
     {
         World.InUI = !World.InUI;
+        if (World.InUI)
+        {
+            Cursor.lockState = CursorLockMode.None;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+        }
     }
 
 #pragma warning restore IDE0051
@@ -123,7 +131,7 @@ public class Player : MonoBehaviour
     private void Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
-        camera = Camera.main.transform;
+        _mainCamera = Camera.main.transform;
 
         World = World.Instance;
 
@@ -150,7 +158,7 @@ public class Player : MonoBehaviour
                 angles = new Vector3(Mathf.MoveTowards(angles.x, 90, -rotationY), angles.y + rotationX, 0);
 
             transform.localEulerAngles = new(0f, angles.y, 0f);
-            camera.localEulerAngles = new(angles.x, 0f, 0f);
+            _mainCamera.localEulerAngles = new(angles.x, 0f, 0f);
         }
     }
 
@@ -189,7 +197,7 @@ public class Player : MonoBehaviour
 
         for (float step = checkIncrement; step < reach; step += checkIncrement)
         {
-            Vector3 pos = camera.position + (camera.forward * step);
+            Vector3 pos = _mainCamera.position + (_mainCamera.forward * step);
 
             if (World.CheckForVoxel(pos))
             {

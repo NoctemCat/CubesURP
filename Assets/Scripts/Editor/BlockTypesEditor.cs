@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(BlockObject))]
+//[CustomEditor(typeof(BlockObject))]
 public class BlockTypesEditor : Editor
 {
 

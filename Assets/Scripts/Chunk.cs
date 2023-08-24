@@ -97,7 +97,7 @@ public class Chunk
 
     public JobHandle VoxelMapAccess;
 
-    public JobHandle FillingMods;
+    //public JobHandle FillingMods;
 
 
     public Chunk(Vector3Int chunkPos)

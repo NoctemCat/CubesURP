@@ -14,17 +14,13 @@ public static class WorldHelper
 
         for (Block i = 0; i < Block.Invalid; i++)
         {
-            if (dict.blocks.TryGetValue(i, out var blockObj))
+            if (dict.Blocks.TryGetValue(i, out var blockObj))
             {
                 blocks[(int)i] = new(blockObj);
             }
             else
             {
-                blocks[(int)i] = new BlockStruct()
-                {
-                    isTransparent = true,
-                    isSolid = false,
-                };
+                blocks[(int)i] = new(dict.MissingBlock);
             }
         }
 

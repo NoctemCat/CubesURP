@@ -4,9 +4,10 @@ using UnityEngine;
 
 [System.Serializable]
 [CreateAssetMenu(fileName = "BlockType", menuName = "Cubes/Block Type")]
-public class BlockObject : ScriptableObject
+public class BlockObject : ScriptableObject, ISerializationCallbackReceiver
 {
     public string blockName;
+    public Block blockType;
     public bool isSolid;
     public bool isTransparent;
     public Sprite icon;
@@ -40,6 +41,15 @@ public class BlockObject : ScriptableObject
                 Debug.Log("Error in GetTextureID; invalid face index");
                 return 0;
         }
+    }
+
+    public void OnAfterDeserialize()
+    {
+        blockName = blockType.ToString();
+    }
+
+    public void OnBeforeSerialize()
+    {
     }
 }
 

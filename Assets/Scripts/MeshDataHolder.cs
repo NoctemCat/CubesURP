@@ -61,6 +61,7 @@ public struct MeshDataHolder
             int threadOffset = i * JobsUtility.CacheLineSize;
             Counters[threadOffset] = 0;
             Counters[threadOffset + 1] = 0;
+            Counters[threadOffset + 2] = 0;
         }
 
         await voxelMapAccess;

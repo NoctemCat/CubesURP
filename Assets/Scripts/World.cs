@@ -63,8 +63,6 @@ public class World : MonoBehaviour
         else
             Destroy(Instance);
 
-        BlocksScObj.Init();
-
         Unity.Mathematics.Random rng = new(math.hash(new int2(RNGSeed.GetHashCode(), 0)));
         _RandomXYZ = rng.NextFloat3() * 10000;
 
@@ -93,8 +91,8 @@ public class World : MonoBehaviour
         EmptyJob dummy = new() { };
         GeneratingStructures = dummy.Schedule();
 
-        CheckStructures().Forget();
         CheckDistance().Forget();
+        CheckStructures().Forget();
     }
 
     private void OnDestroy()
@@ -181,8 +179,8 @@ public class World : MonoBehaviour
             LastPlayerChunk = PlayerChunk;
             while (DeactivateFarChunks() && !GenerateVoxelMaps())
             {
-                await UniTask.WaitForSeconds(0.25f);
                 LastPlayerChunk = PlayerChunk;
+                await UniTask.WaitForSeconds(0.25f);
             }
             await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk);
         }

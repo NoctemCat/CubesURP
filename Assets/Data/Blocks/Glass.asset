@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Glass
   m_EditorClassIdentifier: 
   blockName: Glass
+  blockType: 10
   isSolid: 1
   isTransparent: 1
   icon: {fileID: -1126025829, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}

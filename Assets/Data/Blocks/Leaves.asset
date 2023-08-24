@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Leaves
   m_EditorClassIdentifier: 
   blockName: Leaves
+  blockType: 7
   isSolid: 1
   isTransparent: 1
   icon: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
