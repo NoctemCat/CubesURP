@@ -15,19 +15,10 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "RotationX",
+                    "name": "Look",
                     "type": "Value",
-                    "id": "5ed5d56d-5132-4ab7-97ab-1f727b921021",
-                    "expectedControlType": "Axis",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": true
-                },
-                {
-                    "name": "RotationY",
-                    "type": "Value",
-                    "id": "e7f2da66-a3ad-46fb-ab59-6e625708bd9f",
-                    "expectedControlType": "Axis",
+                    "id": "95ee6774-4d50-4c73-860a-722cb1d3ad34",
+                    "expectedControlType": "Vector2",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
@@ -97,17 +88,6 @@
                 }
             ],
             "bindings": [
-                {
-                    "name": "",
-                    "id": "6aefc0f6-e10e-4fce-9e40-33a643918328",
-                    "path": "<Mouse>/delta/x",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "RotationX",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
                 {
                     "name": "WASD",
                     "id": "7e2face2-f220-4c50-8144-91b4c565f305",
@@ -231,23 +211,23 @@
                 },
                 {
                     "name": "",
-                    "id": "ae24eaee-4a80-46cb-83ed-800feef80fed",
-                    "path": "<Mouse>/delta/y",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "RotationY",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "a3236ec7-c63a-4fb1-8d18-dd604261e36b",
                     "path": "<Keyboard>/e",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "OpenInventory",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6f0974a0-d491-475e-a318-21b3613e6bc8",
+                    "path": "<Mouse>/delta",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Look",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

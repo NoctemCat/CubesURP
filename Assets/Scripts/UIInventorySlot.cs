@@ -1,13 +1,16 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class UIInventorySlot : MonoBehaviour
 {
     private Image _image;
     private TMP_Text _amount;
+    private string _name;
 
     void Start()
     {
@@ -15,11 +18,18 @@ public class UIInventorySlot : MonoBehaviour
         _amount = transform.GetChild(1).GetComponent<TMP_Text>();
     }
 
-    public void Set(Sprite icon, string amount)
+    //public void Set(Item item)
+    //{
+    //    _image.sprite = item.;
+    //    _image.enabled = true;
+    //    _amount.text = amount;
+    //}
+    public void Set(Sprite icon, string amount, string name)
     {
         _image.sprite = icon;
         _image.enabled = true;
         _amount.text = amount;
+        _name = name;
     }
     public void Set(Sprite icon)
     {
@@ -30,4 +40,28 @@ public class UIInventorySlot : MonoBehaviour
     {
         _amount.text = amount;
     }
+    public void Disable()
+    {
+        _image.enabled = false;
+        _amount.text = "";
+    }
+
+    //public void OnPointerEnter(PointerEventData eventData)
+    //{
+    //    string tooltipText = $"{_amount.text}\n{_name}".Trim();
+    //    if (tooltipText == string.Empty)
+    //        TooltipScreenSpaceUI.HideTooltip_Static();
+    //    else
+    //        TooltipScreenSpaceUI.ShowTooltip_Static(tooltipText);
+    //}
+
+    //public void OnPointerExit(PointerEventData eventData)
+    //{
+    //    //if (!eventData.fullyExited)
+    //    //    return;
+    //    //Debug.Log(eventData?.pointerCurrentRaycast.gameObject.GetInstanceID() == gameObject.GetInstanceID());
+    //    //if (eventData.pointerCurrentRaycast.gameObject.transform.IsChildOf(transform))
+    //    //    return;
+    //    TooltipScreenSpaceUI.HideTooltip_Static();
+    //}
 }

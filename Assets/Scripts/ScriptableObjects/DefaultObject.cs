@@ -8,7 +8,7 @@ public class DefaultObject : ItemObject
 
     private void Reset()
     {
-        type = ItemType.Default;
+        Type = ItemType.Default;
     }
 
 }

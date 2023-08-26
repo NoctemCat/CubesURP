@@ -12,28 +12,27 @@ using static CubesUtils;
 
 public class World : MonoBehaviour
 {
-    public static World Instance;
+    public static World Instance { get; private set; }
 
-    public VoxelData VoxelData;
-    public NativeArray<BlockStruct> Blocks;
-    public NativeArray<int3> XYZMap;
-    public BiomeStruct Biome;
+    public VoxelData VoxelData { get; private set; }
+    public NativeArray<BlockStruct> Blocks { get; private set; }
+    public NativeArray<int3> XYZMap { get; private set; }
+    public BiomeStruct Biome { get; private set; }
 
     public BlockDictionary BlocksScObj;
     [SerializeField]
     private BiomeAttributes BiomeScObj;
-    public string RNGSeed;
-    public Material SolidMaterial;
-    public Material TransparentMaterial;
+    [field: SerializeField] public string RNGSeed { get; private set; }
+    [field: SerializeField] public Material SolidMaterial { get; private set; }
+    [field: SerializeField] public Material TransparentMaterial { get; private set; }
 
     public GameObject PlayerObj;
 
-    private float3 _RandomXYZ;
-    public float3 RandomXYZ => _RandomXYZ;
+    public float3 RandomXYZ { get; private set; }
 
-    public Dictionary<Vector3Int, Chunk> Chunks;
+    public Dictionary<Vector3Int, Chunk> Chunks { get; private set; }
     //public NativeParallelHashMap<int3, NativeArray<Block>> ChunkMap;
-    public NativeArray<Block> DummyMap;
+    public NativeArray<Block> DummyMap { get; private set; }
 
     NativeList<StructureMarker> Structures;
     JobHandle GeneratingStructures;
@@ -64,9 +63,9 @@ public class World : MonoBehaviour
             Destroy(Instance);
 
         Unity.Mathematics.Random rng = new(math.hash(new int2(RNGSeed.GetHashCode(), 0)));
-        _RandomXYZ = rng.NextFloat3() * 10000;
+        RandomXYZ = rng.NextFloat3() * 10000;
 
-        VoxelData = new(_RandomXYZ);
+        VoxelData = new(RandomXYZ);
         Blocks = WorldHelper.InitBlocksMapping(BlocksScObj);
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
         Biome = new(BiomeScObj);

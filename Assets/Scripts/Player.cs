@@ -64,15 +64,10 @@ public class Player : MonoBehaviour
         movement = value.Get<Vector2>();
     }
 
-    //private void OnRotationX(InputValue value)
-    //{
-    //    mouse.x = value.Get<float>();
-    //}
-
-    //private void OnRotationY(InputValue value)
-    //{
-    //    mouse.y = value.Get<float>();
-    //}
+    private void OnLook(InputValue value)
+    {
+        mouse = value.Get<Vector2>();
+    }
 
     private void OnDestroyBlock(InputValue value)
     {
@@ -131,7 +126,8 @@ public class Player : MonoBehaviour
     private void Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
-        _mainCamera = Camera.main.transform;
+        _mainCamera = transform.Find("LookFrom");
+        //_mainCamera = Camera.main.transform;
 
         World = World.Instance;
 
@@ -150,8 +146,10 @@ public class Player : MonoBehaviour
         {
             PlaceCursorBlock();
 
-            float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-            float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+            //float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+            //float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+            float rotationY = mouse.y * mouseSensitivity * Time.deltaTime;
+            float rotationX = mouse.x * mouseSensitivity * Time.deltaTime;
             if (rotationY > 0)
                 angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
             else

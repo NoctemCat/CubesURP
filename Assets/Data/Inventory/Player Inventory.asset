@@ -12,9 +12,151 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 080ae04246d1893419e8162e1586f179, type: 3}
   m_Name: Player Inventory
   m_EditorClassIdentifier: 
-  SavePath: inventory.Save
-  Capacity: 10
+  <SavePath>k__BackingField: inventory.Save
+  Database: {fileID: 11400000, guid: e787652c3b8769b4f8f4f936711356ee, type: 2}
   Container:
-  - ID: 1
-    Item: {fileID: 11400000, guid: 0eba80efba670d54db3fb4820ceb5b11, type: 2}
-    Amount: 0
+    Slots:
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0

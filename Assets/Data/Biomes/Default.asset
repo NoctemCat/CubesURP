@@ -16,11 +16,11 @@ MonoBehaviour:
   solidGroundHeight: 42
   maxTerrainHeight: 42
   terrainScale: 0.25
-  treeZoneScale: 1.5
-  treeZoneThreshold: 0.5
-  treePlacementScale: 15
-  treePlacementThreshold: 0.8
-  maxTreeHeight: 24
+  treeZoneScale: 1.45
+  treeZoneThreshold: 0.433
+  treePlacementScale: 35.2
+  treePlacementThreshold: 0.7
+  maxTreeHeight: 13
   minTreeHeight: 5
   lodes:
   - nodeName: Dirt
