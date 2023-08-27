@@ -12,11 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Brick
   m_EditorClassIdentifier: 
-  blockName: Brick
+  Name: Brick
+  UIDisplay: {fileID: -827990798, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  Stackable: 1
+  Type: 0
+  Decription: 
+  Data:
+    Name: 
+    Id: -1
+    Buffs: []
   blockType: 11
   isSolid: 1
   isTransparent: 0
-  icon: {fileID: -827990798, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
   backfaceTexture: 11
   frontfaceTexture: 11
   topfaceTexture: 11

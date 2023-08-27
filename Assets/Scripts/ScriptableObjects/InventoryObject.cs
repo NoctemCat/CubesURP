@@ -37,6 +37,20 @@ public class InventoryObject : ScriptableObject
         return true;
     }
 
+    public bool RemoveItem(Item item, int amount)
+    {
+        InventorySlot slot = FindItemOnInventory(item);
+        if (slot != null)
+        {
+            slot.AddAmount(-amount);
+            if (slot.Amount <= 0)
+                slot.RemoveItem();
+
+            return true;
+        }
+        return false;
+    }
+
     private InventorySlot FindItemOnInventory(Item item)
     {
         foreach (var slot in GetSlots)
@@ -87,10 +101,20 @@ public class InventoryObject : ScriptableObject
         }
     }
 
+    /// <summary>
+    /// Merge item1 into item2
+    /// </summary>
+    /// <param name="item1"></param>
+    /// <param name="item2"></param>
+    public void MergeItems(InventorySlot item1, InventorySlot item2)
+    {
+        item2.AddAmount(item1.Amount);
+        item1.RemoveItem();
+    }
+
     public void RemoveItem(InventorySlot item)
     {
-        InventorySlot empty = new();
-        item.UpdateSlot(empty);
+        item.RemoveItem();
     }
 
     [ContextMenu("Save")]
@@ -119,14 +143,12 @@ public class InventoryObject : ScriptableObject
             using Stream stream = new FileStream(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Open, FileAccess.Read);
             Inventory temp = (Inventory)formatter.Deserialize(stream);
 
-            for (int i = 0; i < GetSlots.Length; i++)
+            for (int i = 0; i < GetSlots.Length && i < temp.Slots.Length; i++)
             {
                 GetSlots[i].UpdateSlot(temp.Slots[i]);
             }
         }
     }
-
-
 
     [ContextMenu("Clear")]
     public void Clear()

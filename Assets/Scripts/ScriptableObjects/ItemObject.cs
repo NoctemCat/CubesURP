@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using UnityEngine;
 
 public enum ItemType
 {
+    Block,
     Food,
     Helmet,
     Weapon,
@@ -63,6 +65,11 @@ public class Item
             };
             Buffs[i].GenerateValue();
         }
+    }
+
+    public bool Equals(Item other)
+    {
+        return Id == other.Id && Enumerable.SequenceEqual(Buffs, other.Buffs);
     }
 }
 

@@ -6,51 +6,83 @@ using UnityEngine.InputSystem;
 using System;
 using Cysharp.Threading.Tasks;
 
-public class Toolbar : MonoBehaviour
+public class Toolbar : StaticInterface
 {
     //World world;
-    //public Player player;
-    //public InputActionReference scrollRef;
-    //public RectTransform highlight;
-    //public ItemSlot[] itemSlots;
+    public Player player;
+    public InputActionReference scrollRef;
+    public RectTransform highlight;
+    int slotIndex = 0;
 
-    //int slotIndex = 0;
-
-    //private void OnEnable()
+    //public override void Start()
     //{
-    //    // started, cancelled, performed 
-    //    scrollRef.action.performed += ScrollHandler;
+    //    base.Start();
+
     //}
 
-    //private void OnDisable()
-    //{
-    //    scrollRef.action.performed -= ScrollHandler;
-    //}
+    private void OnEnable()
+    {
+        // started, cancelled, performed 
+        scrollRef.action.performed += ScrollHandler;
+    }
 
-    //private void ScrollHandler(InputAction.CallbackContext context)
-    //{
-    //    float scroll = context.ReadValue<Vector2>().y;
-    //    if (scroll > 0f)
-    //    {
-    //        slotIndex--;
-    //    }
-    //    else if (scroll < 0f)
-    //    {
-    //        slotIndex++;
-    //    }
+    private void OnDisable()
+    {
+        scrollRef.action.performed -= ScrollHandler;
+    }
 
-    //    if (slotIndex > itemSlots.Length - 1)
-    //    {
-    //        slotIndex = 0;
-    //    }
-    //    if (slotIndex < 0)
-    //    {
-    //        slotIndex = itemSlots.Length - 1;
-    //    }
+    private void ScrollHandler(InputAction.CallbackContext context)
+    {
+        float scroll = context.ReadValue<Vector2>().y;
+        if (scroll > 0f)
+        {
+            slotIndex--;
+        }
+        else if (scroll < 0f)
+        {
+            slotIndex++;
+        }
 
-    //    highlight.anchoredPosition = new(24f * slotIndex, 0f);
-    //    player.selectedBlockIndex = itemSlots[slotIndex].itemID;
-    //}
+        if (slotIndex > Slots.Length - 1)
+        {
+            slotIndex = 0;
+        }
+        if (slotIndex < 0)
+        {
+            slotIndex = Slots.Length - 1;
+        }
+
+        highlight.anchoredPosition = new(48f * slotIndex, 0f);
+
+        UpdateSelectedBlock();
+    }
+
+
+    public override void Start()
+    {
+        base.Start();
+
+        for (int i = 0; i < Inventory.GetSlots.Length; i++)
+        {
+            Inventory.GetSlots[i].OnAfterUpdate += OnToolbarUpdate;
+            //Inventory.GetSlots[i].OnBeforeUpdate += OnBeforeUpdate;
+        }
+    }
+
+    private void OnToolbarUpdate(InventorySlot slot)
+    {
+        UpdateSelectedBlock();
+    }
+
+    private void UpdateSelectedBlock()
+    {
+        InventorySlot item = slotsOnInterface[Slots[slotIndex]];
+
+        if (item.Amount > 0 && item.ItemObject is BlockObject blockObject)
+            player.selectedBlockIndex = (int)blockObject.blockType;
+        else
+            player.selectedBlockIndex = -1;
+    }
 
 
     //private void Start()

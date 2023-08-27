@@ -14,9 +14,8 @@ public class BlockDictionary : ScriptableObject
         get
         {
             if (_blocksDict.Count == 0)
-            {
                 Init();
-            }
+
             return _blocksDict;
         }
     }
@@ -30,8 +29,7 @@ public class BlockDictionary : ScriptableObject
         for (int i = 0; i < _blocks.Length; i++)
         {
             if (_blocks[i] == null) continue;
-            Block block = Enum.Parse<Block>(_blocks[i].blockName);
-            _blocksDict[block] = _blocks[i];
+            _blocksDict[_blocks[i].blockType] = _blocks[i];
         }
 
         for (Block block = Block.Air; block < Block.Invalid; block++)

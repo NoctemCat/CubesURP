@@ -10,19 +10,49 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 080ae04246d1893419e8162e1586f179, type: 3}
-  m_Name: Player Equipment
+  m_Name: Player Toolbar
   m_EditorClassIdentifier: 
-  <SavePath>k__BackingField: playerEquip.Save
+  <SavePath>k__BackingField: toolbar.Save
   Database: {fileID: 11400000, guid: e787652c3b8769b4f8f4f936711356ee, type: 2}
   Container:
     Slots:
-    - AllowedItems: 02000000
+    - AllowedItems: 
       Item:
         Name: 
         Id: -1
         Buffs: []
       Amount: 0
-    - AllowedItems: 06000000
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
+      Item:
+        Name: 
+        Id: -1
+        Buffs: []
+      Amount: 0
+    - AllowedItems: 
       Item:
         Name: 
         Id: -1

@@ -19,9 +19,8 @@ public class World : MonoBehaviour
     public NativeArray<int3> XYZMap { get; private set; }
     public BiomeStruct Biome { get; private set; }
 
-    public BlockDictionary BlocksScObj;
-    [SerializeField]
-    private BiomeAttributes BiomeScObj;
+    [field: SerializeField] public BlockDictionary BlocksScObj { get; private set; }
+    [SerializeField] private BiomeAttributes BiomeScObj;
     [field: SerializeField] public string RNGSeed { get; private set; }
     [field: SerializeField] public Material SolidMaterial { get; private set; }
     [field: SerializeField] public Material TransparentMaterial { get; private set; }
@@ -43,8 +42,7 @@ public class World : MonoBehaviour
     HashSet<Chunk> ActiveChunks;
 
     public Vector3Int PlayerChunk;
-
-    int GenerateAtOnce = 8;
+    [SerializeField] private int GenerateAtOnce = 8;
 
     private bool _inUI;
     public bool InUI
@@ -135,15 +133,21 @@ public class World : MonoBehaviour
         int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
         Chunks[chunkPos].AddModification(new(blockPos, block)).Forget();
 
-        if (blockPos.x == 0)
-            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Left])].MarkDirty();
-        if (blockPos.x == VoxelData.ChunkWidth - 1)
-            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Right])].MarkDirty();
-
         if (blockPos.z == 0)
-            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
-        if (blockPos.z == VoxelData.ChunkLength - 1)
-            Chunks[chunkPos + ToVInt3(VoxelData.FaceChecks[(int)VoxelFaces.Front])].MarkDirty();
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
+        else if (blockPos.z == VoxelData.ChunkLength - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Front])].MarkDirty();
+
+        if (blockPos.y == VoxelData.ChunkHeight - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Top])].MarkDirty();
+        else if (blockPos.y == 0)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Bottom])].MarkDirty();
+
+        if (blockPos.x == 0)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Left])].MarkDirty();
+        else if (blockPos.x == VoxelData.ChunkWidth - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Right])].MarkDirty();
+
         //Debug.Log($"{blockPos.x}, {blockPos.y}, {blockPos.z}");
 
     }
@@ -237,6 +241,18 @@ public class World : MonoBehaviour
 
     }
 
+    public void ChunkCreated(Vector3Int chunkCoord)
+    {
+        for (VoxelFaces i = VoxelFaces.Back; i < VoxelFaces.Max; i++)
+        {
+            if (Chunks.TryGetValue(chunkCoord + I3ToVI3(VoxelData.FaceChecks[(int)i]), out var chunk))
+            {
+                //chunk.MarkDirty();
+                chunk.NeighboursGenerated++;
+            }
+        }
+    }
+
     async UniTaskVoid SortStructures()
     {
         await GeneratingStructures;
@@ -267,7 +283,7 @@ public class World : MonoBehaviour
             using var enumerator = values.GetEnumerator();
             while (enumerator.MoveNext())
             {
-                Vector3Int vKey = ToVInt3(key);
+                Vector3Int vKey = I3ToVI3(key);
                 if (!tempDict.ContainsKey(vKey))
                     tempDict[vKey] = new(50);
 
@@ -344,6 +360,19 @@ public class World : MonoBehaviour
             return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
         }
         return false;
+    }
+    public BlockObject GetVoxel(Vector3 worldPos)
+    {
+        Vector3Int thisChunk = GetChunkCoordFromVector3(worldPos);
+
+        if (Chunks.TryGetValue(thisChunk, out Chunk chunk))
+        {
+            int3 block = GetPosInChunkFromVector3(thisChunk, worldPos);
+            chunk.VoxelMapAccess.Complete();
+
+            return BlocksScObj.Blocks[chunk.VoxelMap[CalcIndex(block)]];
+        }
+        return BlocksScObj.Blocks[Block.Air];
     }
 
     int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;

@@ -11,8 +11,8 @@ TextureImporter:
     linearTexture: 0
     fadeOut: 0
     borderMipMap: 1
-    mipMapsPreserveCoverage: 0
-    alphaTestReferenceValue: 7.81
+    mipMapsPreserveCoverage: 1
+    alphaTestReferenceValue: 0.1
     mipMapFadeDistanceStart: 2
     mipMapFadeDistanceEnd: 4
   bumpmap:
@@ -23,9 +23,9 @@ TextureImporter:
     flipGreenChannel: 0
   isReadable: 1
   streamingMipmaps: 0
-  streamingMipmapsPriority: 0
+  streamingMipmapsPriority: 86
   vTOnly: 0
-  ignoreMipmapLimit: 0
+  ignoreMipmapLimit: 1
   grayScaleToAlpha: 0
   generateCubemap: 6
   cubemapConvolution: 0
@@ -52,7 +52,7 @@ TextureImporter:
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
-  alphaIsTransparency: 0
+  alphaIsTransparency: 1
   spriteTessellationDetail: -1
   textureType: 0
   textureShape: 1

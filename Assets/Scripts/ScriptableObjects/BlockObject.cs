@@ -4,13 +4,11 @@ using UnityEngine;
 
 [System.Serializable]
 [CreateAssetMenu(fileName = "BlockType", menuName = "Cubes/Block Type")]
-public class BlockObject : ScriptableObject, ISerializationCallbackReceiver
+public class BlockObject : ItemObject
 {
-    public string blockName;
     public Block blockType;
     public bool isSolid;
     public bool isTransparent;
-    public Sprite icon;
 
     [Header("Texture Values")]
     public int backfaceTexture;
@@ -43,14 +41,12 @@ public class BlockObject : ScriptableObject, ISerializationCallbackReceiver
         }
     }
 
-    public void OnAfterDeserialize()
+    private void Reset()
     {
-        blockName = blockType.ToString();
+        Type = ItemType.Block;
+        Stackable = true;
     }
 
-    public void OnBeforeSerialize()
-    {
-    }
 }
 
 public struct BlockStruct

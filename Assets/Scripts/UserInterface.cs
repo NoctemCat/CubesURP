@@ -14,7 +14,7 @@ public abstract class UserInterface : MonoBehaviour
 
     protected Dictionary<GameObject, InventorySlot> slotsOnInterface = new();
 
-    void Start()
+    public virtual void Start()
     {
         for (int i = 0; i < Inventory.GetSlots.Length; i++)
         {
@@ -76,16 +76,63 @@ public abstract class UserInterface : MonoBehaviour
     protected void OnEnter(GameObject obj)
     {
         MouseData.SlotHoverOver = obj;
+
+        InventorySlot item = slotsOnInterface[obj];
+
+        if (item.Item.Id < 0)
+        {
+            TooltipScreenSpaceUI.HideTooltip_Static();
+        }
+        else
+        {
+            string tooltipText = $"{item.Item.Name}\n{item.Amount}".Trim();
+            TooltipScreenSpaceUI.ShowTooltip_Static(tooltipText);
+        }
     }
 
     protected void OnExit(GameObject obj)
     {
         MouseData.SlotHoverOver = null;
+        TooltipScreenSpaceUI.HideTooltip_Static();
     }
 
     protected void OnBeginDrag(GameObject obj)
     {
         MouseData.TempItemBeingDragged = CreateTempItem(obj);
+    }
+
+    protected void OnDrag(GameObject obj)
+    {
+        if (MouseData.TempItemBeingDragged != null)
+        {
+            TooltipScreenSpaceUI.HideTooltip_Static();
+            MouseData.TempItemBeingDragged.GetComponent<RectTransform>().position = Mouse.current.position.ReadValue();
+        }
+
+    }
+
+    protected void OnEndDrag(GameObject obj)
+    {
+        Destroy(MouseData.TempItemBeingDragged);
+
+        if (MouseData.InterfaceMouseIsOver == null)
+        {
+            slotsOnInterface[obj].RemoveItem();
+            return;
+        }
+
+        if (MouseData.SlotHoverOver && slotsOnInterface[obj].Item.Id >= 0 && MouseData.SlotHoverOver != obj)
+        {
+            InventorySlot mouseHoverSlotData = MouseData.InterfaceMouseIsOver.slotsOnInterface[MouseData.SlotHoverOver];
+            if (!slotsOnInterface[obj].Item.Equals(mouseHoverSlotData.Item))
+            {
+                Inventory.SwapItems(slotsOnInterface[obj], mouseHoverSlotData);
+            }
+            else
+            {
+                Inventory.MergeItems(slotsOnInterface[obj], mouseHoverSlotData);
+            }
+        }
     }
 
     public GameObject CreateTempItem(GameObject obj)
@@ -103,31 +150,6 @@ public abstract class UserInterface : MonoBehaviour
             img.raycastTarget = false;
         }
         return tempItem;
-    }
-
-    protected void OnDrag(GameObject obj)
-    {
-        if (MouseData.TempItemBeingDragged != null)
-        {
-            MouseData.TempItemBeingDragged.GetComponent<RectTransform>().position = Mouse.current.position.ReadValue();
-        }
-    }
-
-    protected void OnEndDrag(GameObject obj)
-    {
-        Destroy(MouseData.TempItemBeingDragged);
-
-        if (MouseData.InterfaceMouseIsOver == null)
-        {
-            slotsOnInterface[obj].RemoveItem();
-            return;
-        }
-
-        if (MouseData.SlotHoverOver && slotsOnInterface[obj].Item.Id >= 0)
-        {
-            InventorySlot mouseHoverSlotData = MouseData.InterfaceMouseIsOver.slotsOnInterface[MouseData.SlotHoverOver];
-            Inventory.SwapItems(slotsOnInterface[obj], mouseHoverSlotData);
-        }
     }
 }
 

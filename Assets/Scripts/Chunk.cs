@@ -63,6 +63,8 @@ public struct Neighbours
 {
     public NativeArray<Block> Back;
     public NativeArray<Block> Front;
+    public NativeArray<Block> Top;
+    public NativeArray<Block> Bottom;
     public NativeArray<Block> Right;
     public NativeArray<Block> Left;
 }
@@ -77,6 +79,7 @@ public struct VoxelMod
 
 public class Chunk
 {
+    private readonly World World;
     VoxelData Data;
     public int3 ChunkPos;
     public Vector3 WorldPos;
@@ -93,6 +96,8 @@ public class Chunk
     public bool RequestingStop;
     public bool DirtyMesh;
 
+    public int NeighboursGenerated;
+    private bool AllNeighbours;
     //UniTask GenTask;
 
     public JobHandle VoxelMapAccess;
@@ -102,7 +107,8 @@ public class Chunk
 
     public Chunk(Vector3Int chunkPos)
     {
-        Data = World.Instance.VoxelData;
+        World = World.Instance;
+        Data = World.VoxelData;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
         WorldPos = new(chunkPos.x * Data.ChunkWidth, chunkPos.y * Data.ChunkHeight, chunkPos.z * Data.ChunkLength);
 
@@ -125,17 +131,19 @@ public class Chunk
         DirtyMesh = false;
 
         _holder.Init(ChunkPos);
+        NeighboursGenerated = 0;
+        AllNeighbours = false;
 
         rp = new()
         {
-            material = World.Instance.SolidMaterial,
+            material = World.SolidMaterial,
             shadowCastingMode = ShadowCastingMode.TwoSided,
             receiveShadows = true,
             renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
         };
         trp = new()
         {
-            material = World.Instance.TransparentMaterial,
+            material = World.TransparentMaterial,
             shadowCastingMode = ShadowCastingMode.TwoSided,
             receiveShadows = true,
             renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
@@ -154,6 +162,11 @@ public class Chunk
 
     public void Update()
     {
+        if (!AllNeighbours && NeighboursGenerated >= 6)
+        {
+            AllNeighbours = true;
+            DirtyMesh = true;
+        }
         if (Modifications.Length > 0 && !IsGeneratingMesh)
         {
             DirtyMesh = true;
@@ -196,7 +209,7 @@ public class Chunk
 
     //public void EditVoxel(Vector3 position, Block block)
     //{
-    //    AddModification(new(World.Instance.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
+    //    AddModification(new(World.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
     //}
 
     public void MarkDirty()
@@ -208,9 +221,9 @@ public class Chunk
     {
         VoxelMapAccess = GenerateVoxelMap();
         DirtyMesh = true;
-        //World.Instance.AddChunkVoxelMap(ChunkPos, VoxelMap);
+        //World.AddChunkVoxelMap(ChunkPos, VoxelMap);
         await VoxelMapAccess;
-        World.Instance.AddStructures(Structures).Forget();
+        World.AddStructures(Structures).Forget();
     }
 
 
@@ -219,6 +232,7 @@ public class Chunk
         if (!IsGeneratingMesh)
         {
             IsGeneratingMesh = true;
+            DirtyMesh = false;
             //DirtyMesh = false;
 
             var isFinished = await GenerateMesh();
@@ -226,7 +240,8 @@ public class Chunk
             {
                 IsMeshDrawable = true;
                 IsGeneratingMesh = false;
-                DirtyMesh = false;
+
+                World.ChunkCreated(I3ToVI3(ChunkPos));
             }
             else
             {
@@ -241,8 +256,8 @@ public class Chunk
         GenerateChunkJob generateChunk = new()
         {
             Data = Data,
-            Biome = World.Instance.Biome,
-            XYZMap = World.Instance.XYZMap,
+            Biome = World.Biome,
+            XYZMap = World.XYZMap,
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
@@ -266,8 +281,11 @@ public class Chunk
         if (RequestingStop) return false;
 
         _holder.ResizeFacesData();
+        await VoxelMapAccess;
 
-        VoxelMapAccess = await _holder.SortVoxels(VoxelMapAccess, VoxelMap);
+        JobHandle access = _holder.FillNeighbours(VoxelMapAccess, out Neighbours neighbours, ref NeighboursGenerated);
+
+        VoxelMapAccess = _holder.SortVoxels(access, neighbours, VoxelMap);
         await VoxelMapAccess;
 
         if (RequestingStop) return false;
@@ -290,7 +308,7 @@ public class Chunk
         NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
-            if (World.Instance.Chunks.TryGetValue(ToVInt3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
                 neighbours.Add(chunk.VoxelMapAccess);
         }
         neighbours.Add(VoxelMapAccess);

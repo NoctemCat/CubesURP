@@ -12,10 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Air
   m_EditorClassIdentifier: 
-  blockName: Air
+  Name: Air
+  UIDisplay: {fileID: 0}
+  Stackable: 0
+  Type: 0
+  Decription: 
+  Data:
+    Name: 
+    Id: -1
+    Buffs: []
+  blockType: 0
   isSolid: 0
   isTransparent: 1
-  icon: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   backfaceTexture: 0
   frontfaceTexture: 0
   topfaceTexture: 0

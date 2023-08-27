@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InventoryOn : MonoBehaviour
+public class PlayerInventory : MonoBehaviour
 {
+    public InventoryObject ToolbarObj;
     public InventoryObject InventoryObj;
     public InventoryObject EquipmentObj;
 
@@ -12,11 +13,13 @@ public class InventoryOn : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
+            ToolbarObj.Save();
             InventoryObj.Save();
             EquipmentObj.Save();
         }
         if (Input.GetKeyDown(KeyCode.Tab))
         {
+            ToolbarObj.Load();
             InventoryObj.Load();
             EquipmentObj.Load();
         }
@@ -34,8 +37,21 @@ public class InventoryOn : MonoBehaviour
         }
     }
 
+    public void AddItem(Item item, int amount)
+    {
+        if (!ToolbarObj.AddItem(item, amount))
+        {
+            InventoryObj.AddItem(item, amount);
+        }
+    }
+    public bool RemoveItem(Item item, int amount)
+    {
+        return ToolbarObj.RemoveItem(item, amount);
+    }
+
     private void OnApplicationQuit()
     {
+        ToolbarObj.Clear();
         InventoryObj.Container.Clear();
         EquipmentObj.Container.Clear();
     }

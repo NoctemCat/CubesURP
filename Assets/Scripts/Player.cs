@@ -51,7 +51,7 @@ public class Player : MonoBehaviour
     public float checkIncrement = 0.75f;
     public float reach = 8f;
 
-    public Block selectedBlockIndex = Block.Bedrock;
+    public int selectedBlockIndex;
 
     public bool isJumping;
 
@@ -74,27 +74,43 @@ public class Player : MonoBehaviour
         if (World != null && highlightBlock.gameObject.activeSelf && value.isPressed)
         {
             //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
-            World.PlaceBlock(highlightBlock.position, 0);
+            BlockObject blockObjetc = World.GetVoxel(highlightBlock.position);
+            if (blockObjetc.blockType != Block.Air)
+            {
+                World.PlaceBlock(highlightBlock.position, 0);
+
+                var inventory = GetComponent<PlayerInventory>();
+                inventory.AddItem(new Item(blockObjetc), 1);
+            }
         }
     }
 
     private void OnPlaceBlock(InputValue value)
     {
-        if (placeBlock.gameObject.activeSelf && value.isPressed)
+        if (selectedBlockIndex < 0) return;
+
+        BlockObject blockObjet = World.GetVoxel(placeBlock.position);
+        if (blockObjet.blockType != Block.Air) return;
+
+        if (!placeBlock.gameObject.activeSelf || !value.isPressed) return;
+
+        int xSelf = Mathf.FloorToInt(transform.position.x);
+        int ySelf = Mathf.FloorToInt(transform.position.y);
+        int zSelf = Mathf.FloorToInt(transform.position.z);
+
+        int xBlock = Mathf.FloorToInt(placeBlock.position.x);
+        int yBlock = Mathf.FloorToInt(placeBlock.position.y);
+        int zBlock = Mathf.FloorToInt(placeBlock.position.z);
+
+        if (xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock) return;
+
+        var inventory = GetComponent<PlayerInventory>();
+        Block selBlock = (Block)selectedBlockIndex;
+        BlockObject selObj = World.BlocksScObj.Blocks[selBlock];
+
+        if (inventory.RemoveItem(new Item(selObj), 1))
         {
-            int xSelf = Mathf.FloorToInt(transform.position.x);
-            int ySelf = Mathf.FloorToInt(transform.position.y);
-            int zSelf = Mathf.FloorToInt(transform.position.z);
-
-            int xBlock = Mathf.FloorToInt(placeBlock.position.x);
-            int yBlock = Mathf.FloorToInt(placeBlock.position.y);
-            int zBlock = Mathf.FloorToInt(placeBlock.position.z);
-
-            if (!(xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock))
-            {
-                //World.GetChunkFromVector3(placeBlock.position).EditVoxel(placeBlock.position, selectedBlockIndex);
-                World.PlaceBlock(placeBlock.position, selectedBlockIndex);
-            }
+            World.PlaceBlock(placeBlock.position, selBlock);
         }
     }
 

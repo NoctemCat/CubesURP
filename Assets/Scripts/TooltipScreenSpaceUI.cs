@@ -30,6 +30,11 @@ public class TooltipScreenSpaceUI : MonoBehaviour
     private void Update()
     {
         SetText(_getTooltipTextFunc());
+        UpdatePosition();
+    }
+
+    private void UpdatePosition()
+    {
         Vector2 anchoredPosition = Mouse.current.position.ReadValue() / _canvas.scaleFactor;
 
         if (anchoredPosition.x + _background.rect.width > _canvas.pixelRect.width)
@@ -66,8 +71,9 @@ public class TooltipScreenSpaceUI : MonoBehaviour
     private void ShowTooltip(Func<string> getTooltip)
     {
         _getTooltipTextFunc = getTooltip;
-        gameObject.SetActive(true);
         SetText(_getTooltipTextFunc());
+        UpdatePosition();
+        gameObject.SetActive(true);
     }
 
 

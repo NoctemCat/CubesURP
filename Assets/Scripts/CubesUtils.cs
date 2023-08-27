@@ -3,8 +3,8 @@ using UnityEngine;
 
 public static class CubesUtils
 {
-    public static Vector3Int ToVInt3(int3 v) => new(v.x, v.y, v.z);
-
+    public static Vector3Int I3ToVI3(int3 v) => new(v.x, v.y, v.z);
+    public static int3 VI3ToI3(Vector3Int v) => new(v.x, v.y, v.z);
 
     //public static float Get2DPerlin(in VoxelData data, float2 position, float offset, float scale)
     //{

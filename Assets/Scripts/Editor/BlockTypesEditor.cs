@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 
-//[CustomEditor(typeof(BlockObject))]
+[CustomEditor(typeof(BlockObject))]
 public class BlockTypesEditor : Editor
 {
 
@@ -70,7 +70,7 @@ public class BlockTypesEditor : Editor
         Texture2D croppedTexture = new(VoxelDataStatic.TextureAtlasSizeInBlocks, VoxelDataStatic.TextureAtlasSizeInBlocks)
         {
             wrapMode = TextureWrapMode.Clamp,
-            filterMode = FilterMode.Point
+            filterMode = FilterMode.Point,
         };
         if (textureID >= 0 && textureID < VoxelDataStatic.TextureAtlasSizeInBlocks * VoxelDataStatic.TextureAtlasSizeInBlocks)
         {
