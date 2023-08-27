@@ -44,8 +44,8 @@ public class DebugScreen : MonoBehaviour
             string debug = "Debug Screen\n";
             debug += frameRate + " fps\n";
             var pPos = World.PlayerObj.transform.position;
-            debug += "XYZ: " + Mathf.FloorToInt(pPos.x) + " / " + Mathf.FloorToInt(pPos.y) + " / " + Mathf.FloorToInt(pPos.z) + "\n";
-            debug += "Chunk: " + World.PlayerChunk.x + " / " + World.PlayerChunk.z + "\n";
+            debug += $"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}\n";
+            debug += $"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}\n";
             debugText.text = debug;
         }
 

@@ -4557,7 +4557,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1769706004
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4725,6 +4725,7 @@ GameObject:
   - component: {fileID: 1834424507}
   - component: {fileID: 1834424506}
   - component: {fileID: 1834424508}
+  - component: {fileID: 1834424509}
   m_Layer: 5
   m_Name: Toolbar
   m_TagString: Untagged
@@ -4826,6 +4827,19 @@ MonoBehaviour:
   scrollRef: {fileID: 8032812528523007505, guid: c9ee162633f9c5f42bc319d5e325f761,
     type: 3}
   highlight: {fileID: 3680572049302411187}
+--- !u!114 &1834424509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1834424503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Delegates: []
 --- !u!1 &1842040154
 GameObject:
   m_ObjectHideFlags: 0
