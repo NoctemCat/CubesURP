@@ -37,7 +37,6 @@ public class World : MonoBehaviour
     JobHandle GeneratingStructures;
 
     List<Vector3Int> ViewCoords;
-    List<Vector3Int> VoxelGenCoords;
 
     HashSet<Chunk> ActiveChunks;
 
@@ -69,7 +68,6 @@ public class World : MonoBehaviour
         Biome = new(BiomeScObj);
 
         ViewCoords = WorldHelper.InitViewCoords(VoxelData.ViewDistanceInChunks);
-        VoxelGenCoords = WorldHelper.InitViewCoords(VoxelData.ViewDistanceInChunks + 1);
 
         Chunks = new(ViewCoords.Count);
         //ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
@@ -164,6 +162,26 @@ public class World : MonoBehaviour
         }
     }
 
+    // Basic frustrum culling, currently slower than without it
+    // Currently testing
+    //private bool CheckChunk(Chunk chunk)
+    //{
+    //    Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
+    //    for (int i = 0; i < chunk.WorldPoints.Length; i++)
+    //    {
+    //        bool insidePlane = true;
+
+    //        for (int j = 0; j < planes.Length; j++)
+    //            insidePlane = insidePlane && planes[j].GetSide(chunk.WorldPoints[i]);
+
+
+    //        if (insidePlane)
+    //            return true;
+    //    }
+
+    //    return false;
+    //}
+
     async UniTaskVoid CheckStructures()
     {
         while (true)
@@ -180,11 +198,16 @@ public class World : MonoBehaviour
         while (true)
         {
             LastPlayerChunk = PlayerChunk;
-            while (DeactivateFarChunks() && !GenerateVoxelMaps())
+            while (
+                DeactivateFarChunks() &&
+                !GenerateVoxelMaps()
+            )
             {
                 LastPlayerChunk = PlayerChunk;
                 await UniTask.WaitForSeconds(0.25f);
             }
+
+            Debug.Log("Finished generating available");
             await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk);
         }
     }
@@ -207,13 +230,14 @@ public class World : MonoBehaviour
     {
         bool allGenerated = true;
         int toGenerate = GenerateAtOnce;
-        foreach (var coord in VoxelGenCoords)
+        foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
             if (!Chunks.ContainsKey(checkCoord))
             {
                 var chunk = new Chunk(checkCoord);
                 Chunks[checkCoord] = chunk;
+
                 toGenerate--;
                 if (toGenerate <= 0)
                 {
@@ -241,14 +265,48 @@ public class World : MonoBehaviour
 
     }
 
-    public void ChunkCreated(Vector3Int chunkCoord)
+    public void CheckNeighbours(Chunk chunk)
     {
-        for (VoxelFaces i = VoxelFaces.Back; i < VoxelFaces.Max; i++)
+        for (VoxelFaces f = VoxelFaces.Back; f < VoxelFaces.Max; f++)
         {
-            if (Chunks.TryGetValue(chunkCoord + I3ToVI3(VoxelData.FaceChecks[(int)i]), out var chunk))
+            if (Chunks.TryGetValue(I3ToVI3(chunk.ChunkPos + VoxelData.FaceChecks[(int)f]), out _))
             {
-                //chunk.MarkDirty();
-                chunk.NeighboursGenerated++;
+                VoxelFlags flag = f switch
+                {
+                    VoxelFaces.Back => VoxelFlags.Back,
+                    VoxelFaces.Front => VoxelFlags.Front,
+                    VoxelFaces.Top => VoxelFlags.Top,
+                    VoxelFaces.Bottom => VoxelFlags.Bottom,
+                    VoxelFaces.Left => VoxelFlags.Left,
+                    VoxelFaces.Right => VoxelFlags.Right,
+                    VoxelFaces.Max => VoxelFlags.None,
+                    _ => VoxelFlags.None,
+                };
+
+                chunk.NeighboursGenerated |= flag;
+            }
+        }
+    }
+
+    public void ChunkCreated(Chunk chunk)
+    {
+        for (VoxelFaces f = VoxelFaces.Back; f < VoxelFaces.Max; f++)
+        {
+            if (Chunks.TryGetValue(I3ToVI3(chunk.ChunkPos + VoxelData.FaceChecks[(int)f]), out var otherChunk))
+            {
+                VoxelFlags flag = f switch
+                {
+                    VoxelFaces.Back => VoxelFlags.Front,
+                    VoxelFaces.Front => VoxelFlags.Back,
+                    VoxelFaces.Top => VoxelFlags.Bottom,
+                    VoxelFaces.Bottom => VoxelFlags.Top,
+                    VoxelFaces.Left => VoxelFlags.Right,
+                    VoxelFaces.Right => VoxelFlags.Left,
+                    VoxelFaces.Max => VoxelFlags.None,
+                    _ => VoxelFlags.None,
+                };
+
+                otherChunk.NeighboursGenerated |= flag;
             }
         }
     }
@@ -375,7 +433,7 @@ public class World : MonoBehaviour
         return BlocksScObj.Blocks[Block.Air];
     }
 
-    int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
+    private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
 }
 
 [BurstCompile]

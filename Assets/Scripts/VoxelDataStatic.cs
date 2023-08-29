@@ -90,9 +90,10 @@ public enum VoxelFaces
 }
 
 
-// Set someState |= State.IsCool;
-// Unset someState &= ~State.IsCool;
-// someState.HasFlag(State.IsCool)
+// Set someState |= VoxelFlags.Back;
+// Unset someState &= ~VoxelFlags.Back;
+// Check flag (needs boxing) someState.HasFlag(VoxelFlags.Back)
+// Check flag (someState & VoxelFlags.All) == VoxelFlags.All
 [Flags]
 public enum VoxelFlags : byte
 {
@@ -103,4 +104,6 @@ public enum VoxelFlags : byte
     Bottom = 1 << 4,
     Left = 1 << 5,
     Right = 1 << 6,
+
+    All = Back | Front | Top | Bottom | Left | Right,
 }

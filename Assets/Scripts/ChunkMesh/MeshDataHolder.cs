@@ -24,6 +24,9 @@ public struct MeshDataHolder
 
     NativeArray<VertexAttributeDescriptor> _layout;
 
+    int _numberOfFaces;
+    public readonly bool HasFaces => _numberOfFaces > 0;
+
     /// <summary>
     /// Can only be called after CountBlockTypes
     /// </summary>
@@ -37,6 +40,7 @@ public struct MeshDataHolder
 
         MeshData.InitLists();
         FacesData.InitLists();
+        //FacesData.AllFaces
 
         _layout = new NativeArray<VertexAttributeDescriptor>(3, Allocator.Persistent);
         _layout[0] = new(VertexAttribute.Position, VertexAttributeFormat.Float32, 3);
@@ -45,6 +49,8 @@ public struct MeshDataHolder
 
         CountBlocks = new(64, Allocator.Persistent);
         Counters = new(JobsUtility.MaxJobThreadCount * JobsUtility.CacheLineSize, Allocator.Persistent);
+
+        _numberOfFaces = 0;
     }
 
     public void Dispose()
@@ -55,6 +61,7 @@ public struct MeshDataHolder
         Counters.Dispose();
         _layout.Dispose();
     }
+
 
     public async UniTask CountBlockTypes(JobHandle voxelMapAccess, NativeArray<Block> voxelMap)
     {
@@ -100,10 +107,10 @@ public struct MeshDataHolder
         FacesData.TransparentFaces.Capacity = CountBlocks[1] * 6;
     }
 
-    public JobHandle SortVoxels(JobHandle access, Neighbours neighbours, NativeArray<Block> voxelMap)
+    public JobHandle SortVoxels(NativeArray<Block> voxelMap)
     {
-
         // TODO add neighbours
+        JobHandle access = FillNeighbours(out Neighbours neighbours);
         MeshBuilder.SortVoxelFacesJob sortVoxelsJob = new()
         {
             Data = Data,
@@ -120,15 +127,13 @@ public struct MeshDataHolder
         return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, access);
     }
 
-    public JobHandle FillNeighbours(JobHandle voxelMapAccess, out Neighbours neighbours, ref int exist)
+    public JobHandle FillNeighbours(out Neighbours neighbours)
     {
         NativeList<JobHandle> accesses = new(6, Allocator.Temp);
-        exist = 0;
         if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)VoxelFaces.Back]), out Chunk chunk))
         {
             neighbours.Back = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Back = World.DummyMap;
@@ -137,7 +142,6 @@ public struct MeshDataHolder
         {
             neighbours.Front = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Front = World.DummyMap;
@@ -146,7 +150,6 @@ public struct MeshDataHolder
         {
             neighbours.Top = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Top = World.DummyMap;
@@ -155,7 +158,6 @@ public struct MeshDataHolder
         {
             neighbours.Bottom = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Bottom = World.DummyMap;
@@ -164,7 +166,6 @@ public struct MeshDataHolder
         {
             neighbours.Left = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Left = World.DummyMap;
@@ -173,7 +174,6 @@ public struct MeshDataHolder
         {
             neighbours.Right = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
-            exist++;
         }
         else
             neighbours.Right = World.DummyMap;
@@ -299,6 +299,8 @@ public struct MeshDataHolder
 
         mesh.SetSubMesh(1, tMeshDesc, MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontNotifyMeshUsers);
         mesh.bounds = bounds;
+
+        _numberOfFaces = FacesData.AllFaces.Length;
 
         //mesh.RecalculateNormals();
     }

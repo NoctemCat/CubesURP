@@ -356,6 +356,7 @@ static class MeshBuilder
                 }
 
                 return voxelMap[CalcIndex(pos)];
+                //return voxelMap.GetAt
             }
 
             return VoxelMap[CalcIndex(pos)];
@@ -558,7 +559,7 @@ static class MeshBuilder
 
         public void Execute(int i)
         {
-            var vertex = Vertices[i]; 
+            var vertex = Vertices[i];
             vertex.Nor = math.normalize(vertex.Nor);
             Vertices[i] = vertex;
         }

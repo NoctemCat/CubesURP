@@ -174,8 +174,65 @@ public class Player : MonoBehaviour
             transform.localEulerAngles = new(0f, angles.y, 0f);
             _mainCamera.localEulerAngles = new(angles.x, 0f, 0f);
         }
+
+
+        //frustumPlanes[0].GetSide
+
     }
 
+    //void OnDrawGizmos()
+    //{
+    //    Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
+    //    //Debug.Log(frustumPlanes.Length);
+    //    //frustumPlanes[0].ToString
+    //    //Camera.main.transform.rotation
+    //    //frustumPlanes
+    //    //Plane.
+    //    //frustumPlanes[0].
+
+    //    //Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.TransformDirection(frustumPlanes[0].normal));
+    //    //Matrix4x4 trs = Matrix4x4.TRS(Camera.main.transform.TransformPoint(frustumPlanes[0].normal), rotation, Camera.main.transform.localScale);
+    //    //Gizmos.matrix = trs;
+    //    //Color32 color = Color.blue;
+    //    //color.a = 125;
+    //    //Gizmos.color = color;
+    //    //Gizmos.DrawCube(Vector3.zero, new Vector3(1.0f, 1.0f, 0.0001f));
+
+    //    //Gizmos.matrix = Matrix4x4.identity;
+    //    //Gizmos.color = Color.white;
+    //    for (int i = 0; i < frustumPlanes.Length; i++)
+    //    {
+    //        //DrawPlane(Camera.main.transform.position, frustumPlanes[i].normal);
+
+    //        //frustumPlanes[i].GetSide();
+    //        Debug.DrawRay(Camera.main.transform.position, frustumPlanes[i].normal * frustumPlanes[i].distance * -1, Color.red);
+    //    }
+    //}
+
+    //public void DrawPlane(Vector3 position, Vector3 normal)
+    //{
+    //    Vector3 v3;
+
+    //    if (normal.normalized != Vector3.forward)
+    //        v3 = Vector3.Cross(normal, Vector3.forward).normalized * normal.magnitude;
+    //    else
+    //        v3 = Vector3.Cross(normal, Vector3.up).normalized * normal.magnitude;
+
+    //    var corner0 = position + v3;
+    //    var corner2 = position - v3;
+    //    var q = Quaternion.AngleAxis(90.0f, normal);
+    //    v3 = q * v3;
+    //    var corner1 = position + v3;
+    //    var corner3 = position - v3;
+
+    //    Debug.DrawLine(corner0, corner2, Color.green);
+    //    Debug.DrawLine(corner1, corner3, Color.green);
+    //    Debug.DrawLine(corner0, corner1, Color.green);
+    //    Debug.DrawLine(corner1, corner2, Color.green);
+    //    Debug.DrawLine(corner2, corner3, Color.green);
+    //    Debug.DrawLine(corner3, corner0, Color.green);
+    //    Debug.DrawRay(position, normal, Color.red);
+    //}
 
     private void CalculateVelocity()
     {
