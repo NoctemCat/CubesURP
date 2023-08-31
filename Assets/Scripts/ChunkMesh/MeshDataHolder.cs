@@ -45,7 +45,7 @@ public struct MeshDataHolder
         _layout = new NativeArray<VertexAttributeDescriptor>(3, Allocator.Persistent);
         _layout[0] = new(VertexAttribute.Position, VertexAttributeFormat.Float32, 3);
         _layout[1] = new(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3);
-        _layout[2] = new(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2);
+        _layout[2] = new(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 3);
 
         CountBlocks = new(64, Allocator.Persistent);
         Counters = new(JobsUtility.MaxJobThreadCount * JobsUtility.CacheLineSize, Allocator.Persistent);

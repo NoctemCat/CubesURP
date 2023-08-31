@@ -26,17 +26,17 @@ public static class CubesUtils
     public static float Get2DPerlin(in VoxelData data, float2 position, float offset, float scale)
     {
         return noise.cnoise(new float2(
-            (position.x + 0.1f) / 64 * scale + offset + data.RandomXYZ.x,
-            (position.y + 0.1f) / 64 * scale + offset + data.RandomXYZ.y)
+            (position.x + 0.1f) / 16 * scale + offset + data.RandomXYZ.x,
+            (position.y + 0.1f) / 16 * scale + offset + data.RandomXYZ.y)
         );
     }
 
     public static float Get3DPerlin(in VoxelData data, float3 position, float offset, float scale)
     {
         return noise.cnoise(new float3(
-            (position.x + 0.1f) / 64 * scale + offset + data.RandomXYZ.x,
-            (position.y + 0.1f) / 64 * scale + offset + data.RandomXYZ.y,
-            (position.z + 0.1f) / 64 * scale + offset + data.RandomXYZ.z)
+            (position.x + 0.1f) / 16 * scale + offset + data.RandomXYZ.x,
+            (position.y + 0.1f) / 128 * scale + offset + data.RandomXYZ.y,
+            (position.z + 0.1f) / 16 * scale + offset + data.RandomXYZ.z)
         );
     }
 }

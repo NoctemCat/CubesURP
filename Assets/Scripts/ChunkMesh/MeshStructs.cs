@@ -89,15 +89,16 @@ public struct Vertex
 {
     public float3 Pos;
     public float3 Nor;
-    public float2 UV;
+    public float3 UV;
 }
 
 public struct StructureMarker
 {
+    public int BiomeIndex;
     public int3 Position;
     public StructureType Type;
 
-    public StructureMarker(int3 _position, StructureType _type)
-        => (Position, Type) = (_position, _type);
+    public StructureMarker(int _biomeIndex, int3 _position, StructureType _type)
+        => (BiomeIndex, Position, Type) = (_biomeIndex, _position, _type);
 }
 

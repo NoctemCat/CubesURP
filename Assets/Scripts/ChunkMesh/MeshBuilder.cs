@@ -446,12 +446,16 @@ static class MeshBuilder
             float3 dot3 = pos + Data.VoxelVerts[Data.VoxelTris[f].w];
 
             float3 normal = Data.VoxelNormals[f];
-            float2x4 uvs = AddTexture(block.GetTextureID(f));
+            //float2x4 uvs = AddTexture(block.GetTextureID(f));
 
-            Vertices[4 * i + 0] = new Vertex() { Pos = dot0, Nor = normal, UV = uvs.c0 };
-            Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = uvs.c1 };
-            Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = uvs.c2 };
-            Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = uvs.c3 };
+            //Vertices[4 * i + 0] = new Vertex() { Pos = dot0, Nor = normal, UV = uvs.c0 };
+            //Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = uvs.c1 };
+            //Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = uvs.c2 };
+            //Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = uvs.c3 };
+            Vertices[4 * i + 0] = new Vertex() { Pos = dot0, Nor = normal, UV = new(0f, 0f, block.GetTextureID(f)) };
+            Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = new(0f, 1f, block.GetTextureID(f)) };
+            Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = new(1f, 0f, block.GetTextureID(f)) };
+            Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = new(1f, 1f, block.GetTextureID(f)) };
         }
 
         private readonly float2x4 AddTexture(int textureID)

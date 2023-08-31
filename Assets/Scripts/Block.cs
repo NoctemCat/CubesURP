@@ -13,6 +13,7 @@ public enum Block : byte
     Sand,
     Glass,
     Brick,
+    Cactus,
 
     Invalid,
 }
@@ -20,5 +21,6 @@ public enum Block : byte
 
 public enum StructureType
 {
-    Tree
+    Tree,
+    Cactus
 }

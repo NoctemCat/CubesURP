@@ -8,22 +8,22 @@ public class PlayerInventory : MonoBehaviour
     public InventoryObject InventoryObj;
     public InventoryObject EquipmentObj;
 
-    private void Update()
-    {
+    //private void Update()
+    //{
 
-        if (Input.GetKeyDown(KeyCode.LeftAlt))
-        {
-            ToolbarObj.Save();
-            InventoryObj.Save();
-            EquipmentObj.Save();
-        }
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            ToolbarObj.Load();
-            InventoryObj.Load();
-            EquipmentObj.Load();
-        }
-    }
+    //    if (Input.GetKeyDown(KeyCode.LeftAlt))
+    //    {
+    //        ToolbarObj.Save();
+    //        InventoryObj.Save();
+    //        EquipmentObj.Save();
+    //    }
+    //    if (Input.GetKeyDown(KeyCode.Tab))
+    //    {
+    //        ToolbarObj.Load();
+    //        InventoryObj.Load();
+    //        EquipmentObj.Load();
+    //    }
+    //}
 
     public void OnTriggerEnter(Collider other)
     {

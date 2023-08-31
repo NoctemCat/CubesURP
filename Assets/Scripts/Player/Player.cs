@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -138,7 +139,7 @@ public class Player : MonoBehaviour
 
 #pragma warning restore IDE0051
 
-    private void Start()
+    async UniTaskVoid Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
         _lookFrom = transform.Find("LookFrom");
@@ -146,22 +147,25 @@ public class Player : MonoBehaviour
         World = World.Instance;
 
         Cursor.lockState = CursorLockMode.Locked;
+
+        gameObject.SetActive(false);
+
+        await UniTask.WaitForSeconds(0.5f);
+        gameObject.SetActive(true);
     }
 
     private void FixedUpdate()
     {
-        World.GetAccessForPlayer();
-
         CalculateVelocity();
         transform.Translate(velocity, Space.World);
     }
 
     private void Update()
     {
-        World.GetAccessForPlayer();
 
         if (!World.InUI)
         {
+
             PlaceCursorBlock();
 
             //float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
@@ -203,6 +207,7 @@ public class Player : MonoBehaviour
         if ((velocity.x > 0f && Right) || (velocity.x < 0f && Left))
             velocity.x = 0f;
 
+        World.GetAccessForPlayer();
         if (velocity.y < 0f)
             velocity.y = CheckDownSpeed(velocity.y);
         else if (velocity.y > 0f)
@@ -214,6 +219,7 @@ public class Player : MonoBehaviour
     {
         Vector3 lastPos = new();
 
+        World.GetAccessForPlayer();
         for (float step = checkIncrement; step < reach; step += checkIncrement)
         {
             Vector3 pos = _lookFrom.position + (_lookFrom.forward * step);

@@ -14,10 +14,10 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
-  m_LightmapFlags: 1
+  m_LightmapFlags: 0
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3001
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -53,7 +53,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexture:
-        m_Texture: {fileID: 2800000, guid: 590e722868d08f442852eafee9b77baa, type: 3}
+        m_Texture: {fileID: 18700000, guid: f6f6422fb68fe254aa45cd709d5196d3, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -89,8 +89,8 @@ Material:
     - _AlphaClip: 0
     - _AlphaToMask: 0
     - _Alpha_Add: 0
-    - _Alpha_Clip_Threshold: 0.006
-    - _Ambient_Occlusion: 0.623
+    - _Alpha_Clip_Threshold: 0.1
+    - _Ambient_Occlusion: 0.8
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -111,7 +111,7 @@ Material:
     - _Parallax: 0.005
     - _Position: 0
     - _QueueControl: 0
-    - _QueueOffset: 0
+    - _QueueOffset: 1
     - _ReceiveShadows: 1
     - _Smoothness: 0
     - _SmoothnessTextureChannel: 1

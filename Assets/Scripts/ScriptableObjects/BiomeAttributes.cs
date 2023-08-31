@@ -1,27 +1,35 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "BiomeAttributes", menuName = "Cubes/Biome Attribute")]
 public class BiomeAttributes : ScriptableObject
 {
-    public string biomeName;
-    public int solidGroundHeight;
-    public int maxTerrainHeight;
-    public float terrainScale;
+    [Header("Biome Settings")]
+    public string BiomeName;
+    public int Offset;
+    public float Scale;
 
-    [Header("Trees")]
-    public float treeZoneScale = 1.3f;
-    [Range(0.1f, 1f)]
-    public float treeZoneThreshold = 0.6f;
-    public float treePlacementScale = 15f;
-    [Range(0.1f, 1f)]
-    public float treePlacementThreshold = 0.8f;
+    public int TerrainHeight;
+    public float TerrainScale;
 
-    public int maxTreeHeight = 12;
-    public int minTreeHeight = 5;
+    public Block SurfaceBlock;
+    public Block SubsurfaceBlock;
+
+    [Header("Major Flora")]
+    public StructureType FloraType;
+    public float FloraZoneScale = 1.3f;
+    [Range(0.1f, 1f)]
+    public float FloraZoneThreshold = 0.6f;
+    public float FloraPlacementScale = 15f;
+    [Range(0.1f, 1f)]
+    public float FloraPlacementThreshold = 0.8f;
+
+    public int maxHeight = 12;
+    public int minHeight = 5;
 
     public Lode[] lodes;
 }
@@ -40,36 +48,45 @@ public class Lode
 
 public readonly struct BiomeStruct
 {
-    readonly public int SolidGroundHeight;
-    readonly public int MaxTerrainHeight;
+    readonly public int Offset;
+    readonly public float Scale;
+    readonly public int TerrainHeight;
     readonly public float TerrainScale;
 
-    readonly public float TreeZoneScale;
-    readonly public float TreeZoneThreshold;
-    readonly public float TreePlacementScale;
-    readonly public float TreePlacementThreshold;
+    readonly public Block SurfaceBlock;
+    readonly public Block SubsurfaceBlock;
 
-    readonly public int MaxTreeHeight;
-    readonly public int MinTreeHeight;
+    readonly public StructureType FloraType;
+    readonly public float FloraZoneScale;
+    readonly public float FloraZoneThreshold;
+    readonly public float FloraPlacementScale;
+    readonly public float FloraPlacementThreshold;
 
-    readonly public NativeArray<LodeSctruct> Lodes;
+    readonly public int MaxHeight;
+    readonly public int MinHeight;
+
+    readonly public UnsafeList<LodeSctruct> Lodes;
 
     public BiomeStruct(BiomeAttributes biome)
     {
-        SolidGroundHeight = biome.solidGroundHeight;
-        MaxTerrainHeight = biome.maxTerrainHeight;
-        TerrainScale = biome.terrainScale;
-        TreeZoneScale = biome.treeZoneScale;
-        TreeZoneThreshold = biome.treeZoneThreshold;
-        TreePlacementScale = biome.treePlacementScale;
-        TreePlacementThreshold = biome.treePlacementThreshold;
-        MaxTreeHeight = biome.maxTreeHeight;
-        MinTreeHeight = biome.minTreeHeight;
+        Offset = biome.Offset;
+        Scale = biome.Scale;
+        TerrainHeight = biome.TerrainHeight;
+        TerrainScale = biome.TerrainScale;
+        SurfaceBlock = biome.SurfaceBlock;
+        SubsurfaceBlock = biome.SubsurfaceBlock;
+        FloraType = biome.FloraType;
+        FloraZoneScale = biome.FloraZoneScale;
+        FloraZoneThreshold = biome.FloraZoneThreshold;
+        FloraPlacementScale = biome.FloraPlacementScale;
+        FloraPlacementThreshold = biome.FloraPlacementThreshold;
+        MaxHeight = biome.maxHeight;
+        MinHeight = biome.minHeight;
 
         Lodes = new(biome.lodes.Length, Allocator.Persistent);
         for (int i = 0; i < biome.lodes.Length; i++)
         {
-            Lodes[i] = new(biome.lodes[i]);
+            Lodes.Add(new(biome.lodes[i]));
         }
     }
 

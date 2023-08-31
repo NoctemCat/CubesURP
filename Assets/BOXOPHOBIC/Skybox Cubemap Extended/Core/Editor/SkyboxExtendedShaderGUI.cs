@@ -1,42 +1,42 @@
-﻿//Cristian Pop - https://boxophobic.com/
+﻿////Cristian Pop - https://boxophobic.com/
 
-using UnityEngine;
-using UnityEditor;
-using System.Collections.Generic;
+//using UnityEngine;
+//using UnityEditor;
+//using System.Collections.Generic;
 
-public class SkyboxExtendedShaderGUI : ShaderGUI
-{
-    public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
-    {
-        //base.OnGUI(materialEditor, props);
+//public class SkyboxExtendedShaderGUI : ShaderGUI
+//{
+//    //public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
+//    //{
+//    //    //base.OnGUI(materialEditor, props);
 
-        var material0 = materialEditor.target as Material;
+//    //    var material0 = materialEditor.target as Material;
 
-        DrawDynamicInspector(material0, materialEditor, props);
-    }
+//    //    DrawDynamicInspector(material0, materialEditor, props);
+//    //}
 
-    void DrawDynamicInspector(Material material, MaterialEditor materialEditor, MaterialProperty[] props)
-    {
-        var customPropsList = new List<MaterialProperty>();
+//    void DrawDynamicInspector(Material material, MaterialEditor materialEditor, MaterialProperty[] props)
+//    {
+//        var customPropsList = new List<MaterialProperty>();
 
-        for (int i = 0; i < props.Length; i++)
-        {
-            var prop = props[i];
+//        for (int i = 0; i < props.Length; i++)
+//        {
+//            var prop = props[i];
 
-            if (prop.flags == MaterialProperty.PropFlags.HideInInspector)
-                continue;
+//            if (prop.flags == MaterialProperty.PropFlags.HideInInspector)
+//                continue;
 
-            customPropsList.Add(prop);
-        }
+//            customPropsList.Add(prop);
+//        }
 
-        //Draw Custom GUI
-        for (int i = 0; i < customPropsList.Count; i++)
-        {
-            var prop = customPropsList[i];
+//        //Draw Custom GUI
+//        for (int i = 0; i < customPropsList.Count; i++)
+//        {
+//            var prop = customPropsList[i];
 
-            materialEditor.ShaderProperty(prop, prop.displayName);
-        }
+//            materialEditor.ShaderProperty(prop, prop.displayName);
+//        }
 
-        GUILayout.Space(10);
-    }
-}
+//        GUILayout.Space(10);
+//    }
+//}

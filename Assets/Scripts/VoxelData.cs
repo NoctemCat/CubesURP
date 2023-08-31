@@ -11,6 +11,7 @@ public struct VoxelData
     public readonly int ChunkWidth;
     public readonly int ChunkHeight;
     public readonly int ChunkLength;
+    public readonly int3 ChunkDimensions;
     public readonly int ChunkSize;
     public readonly int WorldSizeInChunks;
     public readonly int WorldSizeInVoxels;
@@ -30,6 +31,7 @@ public struct VoxelData
         ChunkWidth = VoxelDataStatic.ChunkWidth;
         ChunkHeight = VoxelDataStatic.ChunkHeight;
         ChunkLength = VoxelDataStatic.ChunkLength;
+        ChunkDimensions = new(ChunkWidth, ChunkHeight, ChunkLength);
         ChunkSize = VoxelDataStatic.ChunkSize;
         WorldSizeInChunks = VoxelDataStatic.WorldSizeInChunks;
         WorldSizeInVoxels = WorldSizeInChunks * ChunkWidth;
