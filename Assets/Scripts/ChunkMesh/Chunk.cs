@@ -14,41 +14,50 @@ using static CubesUtils;
 
 public class Chunk
 {
+    private readonly GameObject _chunkObject;
+    private readonly MeshRenderer _meshRenderer;
+    private readonly MeshFilter _meshFilter;
+    private readonly Mesh _chunkMesh;
+    private readonly Material[] _materials = new Material[2];
+
     private readonly World World;
     VoxelData Data;
     public int3 ChunkPos;
     public Vector3 WorldPos;
-    private Matrix4x4 ChunkWorldMtx;
-    //public Vector3[] WorldPoints;
 
-    public NativeArray<Block> VoxelMap;
-    public NativeList<StructureMarker> Structures;
-    public NativeList<VoxelMod> Modifications;
+    public NativeArray<Block> VoxelMap { get; private set; }
+    private NativeList<StructureMarker> _structures;
+    private NativeList<VoxelMod> _modifications;
     private MeshDataHolder _holder;
 
-    private readonly Mesh _chunkMesh;
+    private bool _isGeneratingMesh;
+    private bool _dirtyMesh;
 
-    public bool IsMeshDrawable;
-    public bool IsGeneratingMesh;
-    public bool RequestingStop;
-    public bool DirtyMesh;
+    private bool _requestingStop;
+    private bool _isActive;
+    public bool IsActive
+    {
+        get { return _isActive; }
+        set
+        {
+            _isActive = value;
+            _chunkObject.SetActive(value);
+            _requestingStop = !value;
+        }
+    }
 
     public VoxelFlags NeighboursGenerated;
-
-    public JobHandle VoxelMapAccess;
-
-    //public JobHandle FillingMods;
-    public Action Update;
+    public JobHandle VoxelMapAccess { get; private set; }
+    public Action CheckNeighbours { get; private set; }
 
     public Chunk(Vector3Int chunkPos)
     {
-        Update = UpdateBeforeInit;
+        CheckNeighbours = CheckNeighboursImpl;
 
         World = World.Instance;
         Data = World.VoxelData;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
         WorldPos = new(chunkPos.x * Data.ChunkWidth, chunkPos.y * Data.ChunkHeight, chunkPos.z * Data.ChunkLength);
-        ChunkWorldMtx = Matrix4x4.Translate(WorldPos);
 
         //WorldPoints = new Vector3[9];
         //WorldPoints[0] = WorldPos;
@@ -63,49 +72,46 @@ public class Chunk
         //WorldPoints[8] = WorldPos + new Vector3(Data.ChunkWidth + 1f / 2f, Data.ChunkHeight + 1f / 2f, Data.ChunkLength + 1f / 2f);
 
         VoxelMap = new(Data.ChunkSize, Allocator.Persistent);
-        Structures = new(100, Allocator.Persistent);
+        _structures = new(100, Allocator.Persistent);
+        _modifications = new(100, Allocator.Persistent);
+
+        _isGeneratingMesh = false;
+        _requestingStop = false;
+
+        _dirtyMesh = false;
+        NeighboursGenerated = VoxelFlags.None;
+
+        _holder.Init(ChunkPos);
+
+        _chunkObject = new GameObject();
+        _meshFilter = _chunkObject.AddComponent<MeshFilter>();
+        _meshRenderer = _chunkObject.AddComponent<MeshRenderer>();
+
+        _materials[0] = World.SolidMaterial;
+        _materials[1] = World.TransparentMaterial;
+        _meshRenderer.materials = _materials;
+
+        _chunkObject.transform.SetParent(World.transform);
+        _chunkObject.transform.position = WorldPos;
+        _chunkObject.name = $"Chunk {ChunkPos.x}/{ChunkPos.y}/{ChunkPos.z}";
 
         _chunkMesh = new Mesh()
         {
             subMeshCount = 2
         };
         _chunkMesh.MarkDynamic();
+        _meshFilter.mesh = _chunkMesh;
 
-        Modifications = new(100, Allocator.Persistent);
-
-        IsMeshDrawable = false;
-        IsGeneratingMesh = false;
-        //VoxelMapReady = false;
-        RequestingStop = false;
-
-        DirtyMesh = false;
-        NeighboursGenerated = VoxelFlags.None;
-
-        _holder.Init(ChunkPos);
-
-        rp = new()
-        {
-            material = World.SolidMaterial,
-            shadowCastingMode = ShadowCastingMode.TwoSided,
-            receiveShadows = true,
-            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
-        };
-        trp = new()
-        {
-            material = World.TransparentMaterial,
-            shadowCastingMode = ShadowCastingMode.TwoSided,
-            receiveShadows = true,
-            renderingLayerMask = GraphicsSettings.defaultRenderingLayerMask
-        };
+        IsActive = true;
 
         StartGenerating().ContinueWith(() =>
         {
-            World.AddStructures(Structures).Forget();
+            World.AddStructures(_structures).Forget();
 
             World.CheckNeighbours(this);
             if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
             {
-                Update = UpdateAfterInit;
+                CheckNeighbours = null;
             }
         });
     }
@@ -113,102 +119,90 @@ public class Chunk
     ~Chunk()
     {
         VoxelMap.Dispose();
-        Modifications.Dispose();
-        Structures.Dispose();
+        _modifications.Dispose();
+        _structures.Dispose();
         _holder.Dispose();
     }
 
-    public void UpdateBeforeInit()
+    public void CheckNeighboursImpl()
     {
         if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
         {
-            DirtyMesh = true;
-            Update = UpdateAfterInit;
+            _dirtyMesh = true;
+            CheckNeighbours = null;
         }
-        UpdateAfterInit();
     }
 
-    public void UpdateAfterInit()
+    public void Update()
     {
-        if (Modifications.Length > 0 && !IsGeneratingMesh)
+        CheckNeighbours?.Invoke();
+
+        if (_modifications.Length > 0 && !_isGeneratingMesh)
         {
-            DirtyMesh = true;
+            _dirtyMesh = true;
         }
 
-        if (DirtyMesh && !IsGeneratingMesh)
+        if (_dirtyMesh && !_isGeneratingMesh)
         {
             StartMeshGen().Forget();
         }
 
-        //if (RequestingStop && !IsGeneratingMesh)
-        //{
-        //    RequestingStop = false;
-        //}
-    }
-
-    RenderParams rp;
-    RenderParams trp;
-
-    public void Draw()
-    {
-        if (!IsMeshDrawable || !_holder.HasFaces) return;
-        //if (ChunkPos.y < 0) return;
-
-        Graphics.RenderMesh(rp, _chunkMesh, 0, ChunkWorldMtx);
-        Graphics.RenderMesh(trp, _chunkMesh, 1, ChunkWorldMtx);
+        if (_requestingStop && !_isGeneratingMesh)
+        {
+            _requestingStop = false;
+        }
     }
 
     public async UniTaskVoid AddModification(VoxelMod mod)
     {
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
-        Modifications.Add(mod);
+        _modifications.Add(mod);
     }
 
     public async UniTaskVoid AddRangeModification(List<VoxelMod> mod)
     {
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
-        Modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
+        _modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
     }
 
-    //public void EditVoxel(Vector3 position, Block block)
-    //{
-    //    AddModification(new(World.GetPosInChunkFromVector3(ChunkPos, position), block)).Forget();
-    //}
+    public void Deactivate()
+    {
+        IsActive = false;
+        _requestingStop = true;
+    }
 
     public void MarkDirty()
     {
-        DirtyMesh = true;
+        _dirtyMesh = true;
     }
 
     async UniTask StartGenerating()
     {
         VoxelMapAccess = GenerateVoxelMap();
-        DirtyMesh = true;
+        _dirtyMesh = true;
         //World.AddChunkVoxelMap(ChunkPos, VoxelMap);
         await VoxelMapAccess;
     }
 
     private async UniTaskVoid StartMeshGen()
     {
-        IsGeneratingMesh = true;
+        _isGeneratingMesh = true;
         //DirtyMesh = false;
 
         var isFinished = await GenerateMesh();
         if (isFinished)
         {
-            DirtyMesh = false;
-            IsMeshDrawable = true;
-
+            _dirtyMesh = false;
             World.ChunkCreated(this);
         }
         else
         {
-            RequestingStop = false;
+            _requestingStop = false;
         }
 
-        IsGeneratingMesh = false;
+        _isGeneratingMesh = false;
     }
 
     JobHandle GenerateVoxelMap()
@@ -221,34 +215,33 @@ public class Chunk
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
-            Structures = Structures.AsParallelWriter(),
+            Structures = _structures.AsParallelWriter(),
         };
         return generateChunk.Schedule(VoxelMap.Length, 8);
     }
 
     async UniTask<bool> GenerateMesh()
     {
-        if (Modifications.Length > 0)
-            await ApplyMods();
+        if (_modifications.Length > 0)
+            ApplyMods().Forget();
 
-        await _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
-        if (_holder.IsEmpty) return true;
+        VoxelMapAccess = _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
-        if (RequestingStop) return false;
-
-        _holder.ResizeFacesData();
         await VoxelMapAccess;
+        if (_holder.IsEmpty) return true;
+        if (_requestingStop) return false;
+        _holder.ResizeFacesData();
 
         VoxelMapAccess = _holder.SortVoxels(VoxelMap);
         await VoxelMapAccess;
 
-        if (RequestingStop) return false;
+        if (_requestingStop) return false;
 
         _holder.ResizeMeshData();
 
         await _holder.FillMeshData();
 
-        if (RequestingStop) return false;
+        if (_requestingStop) return false;
 
         _holder.BuildMesh(_chunkMesh);
 
@@ -258,9 +251,8 @@ public class Chunk
     }
 
 
-    public async UniTask ApplyMods()
+    private async UniTaskVoid ApplyMods()
     {
-        await VoxelMapAccess;
         NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
@@ -272,14 +264,13 @@ public class Chunk
         ApplyModsJob applyModsJob = new()
         {
             Data = Data,
-            Modifications = Modifications.AsArray(),
+            Modifications = _modifications.AsArray(),
             VoxelMap = VoxelMap,
         };
-        VoxelMapAccess = applyModsJob.Schedule(Modifications.Length, 1, JobHandle.CombineDependencies(neighbours.AsArray()));
+        VoxelMapAccess = applyModsJob.Schedule(_modifications.Length, 1, JobHandle.CombineDependencies(neighbours.AsArray()));
 
         await VoxelMapAccess;
-        Modifications.Clear();
-        //DirtyMesh = true;
+        _modifications.Clear();
     }
 }
 
@@ -408,4 +399,15 @@ public struct ApplyModsJob : IJobParallelFor
     }
 
     readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
+}
+
+[BurstCompile]
+public struct ClearListJob : IJob
+{
+    public NativeList<VoxelMod> List;
+
+    public void Execute()
+    {
+        List.Clear();
+    }
 }

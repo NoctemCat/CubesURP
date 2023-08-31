@@ -252,7 +252,6 @@ GameObject:
   - component: {fileID: 88676902}
   - component: {fileID: 88676901}
   - component: {fileID: 88676900}
-  - component: {fileID: 88676899}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -260,27 +259,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!65 &88676899
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 88676898}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &88676900
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -2121,7 +2099,6 @@ MonoBehaviour:
   isGrounded: 0
   isSprinting: 0
   ApplyGravity: 1
-  mouseSensitivity: 25
   walkSpeed: 3
   sprintSpeed: 6
   jumpForce: 7
@@ -2805,6 +2782,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00be91268d08d5940b51c3763775d327, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <Settings>k__BackingField:
+    Version: 0.0.01
+    ViewDistance: 5
+    GenerateAtOnce: 8
+    TimeBetweenGenerating: 0.25
+    MouseSenstivity: 25
   <BlocksScObj>k__BackingField: {fileID: 11400000, guid: 39f7e3a78e934a74f87f09e60141c2d7,
     type: 2}
   BiomeScObj: {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
@@ -2815,7 +2798,6 @@ MonoBehaviour:
     type: 2}
   PlayerObj: {fileID: 671286977}
   PlayerChunk: {x: 0, y: 0, z: 0}
-  GenerateAtOnce: 8
 --- !u!4 &973370881
 Transform:
   m_ObjectHideFlags: 0
@@ -3373,7 +3355,6 @@ GameObject:
   - component: {fileID: 1448028912}
   - component: {fileID: 1448028911}
   - component: {fileID: 1448028910}
-  - component: {fileID: 1448028909}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -3381,27 +3362,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!65 &1448028909
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1448028908}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1448028910
 MeshRenderer:
   m_ObjectHideFlags: 0

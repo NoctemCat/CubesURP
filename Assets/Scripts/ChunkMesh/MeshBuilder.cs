@@ -174,11 +174,13 @@ static class MeshBuilder
         {
             Totals[0] = 0;
             Totals[1] = 0;
+            Totals[2] = 0;
             for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
             {
                 int threadOffset = i * JobsUtility.CacheLineSize;
                 Totals[0] += Counters[threadOffset];
                 Totals[1] += Counters[threadOffset + 1];
+                Totals[2] += Counters[threadOffset + 2];
             }
         }
     }

@@ -14,8 +14,6 @@ public struct VoxelData
     public readonly int ChunkSize;
     public readonly int WorldSizeInChunks;
     public readonly int WorldSizeInVoxels;
-    public readonly int ViewDistanceInChunks;
-    public readonly int SqrViewDistanceInChunks;
 
     public readonly int TextureAtlasSizeInBlocks;
     public readonly float NormalizedBlockTextureSize;
@@ -35,8 +33,6 @@ public struct VoxelData
         ChunkSize = VoxelDataStatic.ChunkSize;
         WorldSizeInChunks = VoxelDataStatic.WorldSizeInChunks;
         WorldSizeInVoxels = WorldSizeInChunks * ChunkWidth;
-        ViewDistanceInChunks = VoxelDataStatic.ViewDistanceInChunks;
-        SqrViewDistanceInChunks = ViewDistanceInChunks * ViewDistanceInChunks;
         TextureAtlasSizeInBlocks = VoxelDataStatic.TextureAtlasSizeInBlocks;
         NormalizedBlockTextureSize = VoxelDataStatic.NormalizedBlockTextureSize;
         RandomXYZ = _randomXYZ;

@@ -11,7 +11,7 @@ public class Player : MonoBehaviour
     public bool isSprinting;
     public bool ApplyGravity = true;
 
-    private Transform _mainCamera;
+    private Transform _lookFrom;
     private World World;
 
     Vector2 mouse = new(0f, 0f);
@@ -19,7 +19,6 @@ public class Player : MonoBehaviour
 
     private Vector3 angles;
 
-    public float mouseSensitivity = 500f;
     public float walkSpeed = 3f;
     public float sprintSpeed = 6f;
     public float jumpForce = 7f;
@@ -142,8 +141,7 @@ public class Player : MonoBehaviour
     private void Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
-        _mainCamera = transform.Find("LookFrom");
-        //_mainCamera = Camera.main.transform;
+        _lookFrom = transform.Find("LookFrom");
 
         World = World.Instance;
 
@@ -152,87 +150,37 @@ public class Player : MonoBehaviour
 
     private void FixedUpdate()
     {
+        World.GetAccessForPlayer();
+
         CalculateVelocity();
         transform.Translate(velocity, Space.World);
     }
 
     private void Update()
     {
+        World.GetAccessForPlayer();
+
         if (!World.InUI)
         {
             PlaceCursorBlock();
 
             //float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
             //float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-            float rotationY = mouse.y * mouseSensitivity * Time.deltaTime;
-            float rotationX = mouse.x * mouseSensitivity * Time.deltaTime;
+            float rotationY = mouse.y * World.Settings.MouseSenstivity * Time.deltaTime;
+            float rotationX = mouse.x * World.Settings.MouseSenstivity * Time.deltaTime;
             if (rotationY > 0)
                 angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
             else
                 angles = new Vector3(Mathf.MoveTowards(angles.x, 90, -rotationY), angles.y + rotationX, 0);
 
             transform.localEulerAngles = new(0f, angles.y, 0f);
-            _mainCamera.localEulerAngles = new(angles.x, 0f, 0f);
+            _lookFrom.localEulerAngles = new(angles.x, 0f, 0f);
         }
 
 
         //frustumPlanes[0].GetSide
 
     }
-
-    //void OnDrawGizmos()
-    //{
-    //    Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
-    //    //Debug.Log(frustumPlanes.Length);
-    //    //frustumPlanes[0].ToString
-    //    //Camera.main.transform.rotation
-    //    //frustumPlanes
-    //    //Plane.
-    //    //frustumPlanes[0].
-
-    //    //Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.TransformDirection(frustumPlanes[0].normal));
-    //    //Matrix4x4 trs = Matrix4x4.TRS(Camera.main.transform.TransformPoint(frustumPlanes[0].normal), rotation, Camera.main.transform.localScale);
-    //    //Gizmos.matrix = trs;
-    //    //Color32 color = Color.blue;
-    //    //color.a = 125;
-    //    //Gizmos.color = color;
-    //    //Gizmos.DrawCube(Vector3.zero, new Vector3(1.0f, 1.0f, 0.0001f));
-
-    //    //Gizmos.matrix = Matrix4x4.identity;
-    //    //Gizmos.color = Color.white;
-    //    for (int i = 0; i < frustumPlanes.Length; i++)
-    //    {
-    //        //DrawPlane(Camera.main.transform.position, frustumPlanes[i].normal);
-
-    //        //frustumPlanes[i].GetSide();
-    //        Debug.DrawRay(Camera.main.transform.position, frustumPlanes[i].normal * frustumPlanes[i].distance * -1, Color.red);
-    //    }
-    //}
-
-    //public void DrawPlane(Vector3 position, Vector3 normal)
-    //{
-    //    Vector3 v3;
-
-    //    if (normal.normalized != Vector3.forward)
-    //        v3 = Vector3.Cross(normal, Vector3.forward).normalized * normal.magnitude;
-    //    else
-    //        v3 = Vector3.Cross(normal, Vector3.up).normalized * normal.magnitude;
-
-    //    var corner0 = position + v3;
-    //    var corner2 = position - v3;
-    //    var q = Quaternion.AngleAxis(90.0f, normal);
-    //    v3 = q * v3;
-    //    var corner1 = position + v3;
-    //    var corner3 = position - v3;
-
-    //    Debug.DrawLine(corner0, corner2, Color.green);
-    //    Debug.DrawLine(corner1, corner3, Color.green);
-    //    Debug.DrawLine(corner0, corner1, Color.green);
-    //    Debug.DrawLine(corner1, corner2, Color.green);
-    //    Debug.DrawLine(corner2, corner3, Color.green);
-    //    Debug.DrawLine(corner3, corner0, Color.green);
-    //    Debug.DrawRay(position, normal, Color.red);
-    //}
 
     private void CalculateVelocity()
     {
@@ -268,7 +216,7 @@ public class Player : MonoBehaviour
 
         for (float step = checkIncrement; step < reach; step += checkIncrement)
         {
-            Vector3 pos = _mainCamera.position + (_mainCamera.forward * step);
+            Vector3 pos = _lookFrom.position + (_lookFrom.forward * step);
 
             if (World.CheckForVoxel(pos))
             {

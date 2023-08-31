@@ -63,7 +63,7 @@ public struct MeshDataHolder
     }
 
 
-    public async UniTask CountBlockTypes(JobHandle voxelMapAccess, NativeArray<Block> voxelMap)
+    public JobHandle CountBlockTypes(JobHandle voxelMapAccess, NativeArray<Block> voxelMap)
     {
         for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
         {
@@ -73,26 +73,21 @@ public struct MeshDataHolder
             Counters[threadOffset + 2] = 0;
         }
 
-        await voxelMapAccess;
         MeshBuilder.CountBlockTypesJob countBlockTypes = new()
         {
             Blocks = World.Blocks,
             VoxelMap = voxelMap,
             Counters = Counters,
         };
-        voxelMapAccess = countBlockTypes.Schedule(voxelMap.Length, 1);
+        voxelMapAccess = countBlockTypes.Schedule(voxelMap.Length, 1, voxelMapAccess);
 
-        await voxelMapAccess;
-        CountBlocks[0] = 0;
-        CountBlocks[1] = 0;
-        CountBlocks[2] = 0;
-        for (var i = 0; i < JobsUtility.MaxJobThreadCount; i++)
+        MeshBuilder.SumBlockTypesJob sumBlockTypes = new()
         {
-            int threadOffset = i * JobsUtility.CacheLineSize;
-            CountBlocks[0] += Counters[threadOffset];
-            CountBlocks[1] += Counters[threadOffset + 1];
-            CountBlocks[2] += Counters[threadOffset + 2];
-        }
+            Counters = Counters,
+            Totals = CountBlocks,
+        };
+
+        return sumBlockTypes.Schedule(voxelMapAccess);
     }
 
     public void ResizeFacesData()

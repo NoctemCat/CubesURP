@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
 using Unity.Collections;
@@ -13,6 +14,7 @@ using static CubesUtils;
 public class World : MonoBehaviour
 {
     public static World Instance { get; private set; }
+    [field: SerializeField] public Settings Settings { get; private set; }
 
     public VoxelData VoxelData { get; private set; }
     public NativeArray<BlockStruct> Blocks { get; private set; }
@@ -38,10 +40,9 @@ public class World : MonoBehaviour
 
     List<Vector3Int> ViewCoords;
 
-    HashSet<Chunk> ActiveChunks;
+    List<Chunk> ActiveChunks;
 
     public Vector3Int PlayerChunk;
-    [SerializeField] private int GenerateAtOnce = 8;
 
     private bool _inUI;
     public bool InUI
@@ -59,6 +60,8 @@ public class World : MonoBehaviour
         else
             Destroy(Instance);
 
+        LoadSettings();
+
         Unity.Mathematics.Random rng = new(math.hash(new int2(RNGSeed.GetHashCode(), 0)));
         RandomXYZ = rng.NextFloat3() * 10000;
 
@@ -67,7 +70,7 @@ public class World : MonoBehaviour
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
         Biome = new(BiomeScObj);
 
-        ViewCoords = WorldHelper.InitViewCoords(VoxelData.ViewDistanceInChunks);
+        ViewCoords = WorldHelper.InitViewCoords(Settings.ViewDistance);
 
         Chunks = new(ViewCoords.Count);
         //ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
@@ -102,6 +105,23 @@ public class World : MonoBehaviour
         Structures.Dispose();
     }
 
+    public void SaveSettings()
+    {
+        string saveSettings = JsonUtility.ToJson(Settings, true);
+        File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
+    }
+    public void LoadSettings()
+    {
+        if (File.Exists($"{Application.dataPath}/settings.cfg"))
+        {
+            string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
+            Settings = JsonUtility.FromJson<Settings>(loadSettings);
+        }
+        else
+        {
+            SaveSettings();
+        }
+    }
     //public void AddChunkVoxelMap(int3 chunk, NativeArray<Block> voxelMap)
     //{
     //    ChunkMap[chunk] = voxelMap;
@@ -158,7 +178,7 @@ public class World : MonoBehaviour
         foreach (var chunk in ActiveChunks)
         {
             chunk.Update();
-            chunk.Draw();
+            //chunk.Draw();
         }
     }
 
@@ -204,10 +224,10 @@ public class World : MonoBehaviour
             )
             {
                 LastPlayerChunk = PlayerChunk;
-                await UniTask.WaitForSeconds(0.25f);
+                await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating);
             }
 
-            Debug.Log("Finished generating available");
+            //Debug.Log("Finished generating available");
             await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk);
         }
     }
@@ -216,10 +236,14 @@ public class World : MonoBehaviour
     {
         foreach (Chunk chunk in ActiveChunks)
         {
-            Vector3Int chunkPos = new(chunk.ChunkPos.x, chunk.ChunkPos.y, chunk.ChunkPos.z);
-            if ((chunkPos - PlayerChunk).sqrMagnitude > VoxelData.SqrViewDistanceInChunks)
+            Vector3Int viewChunkPos = I3ToVI3(chunk.ChunkPos) - PlayerChunk;
+            if (
+                viewChunkPos.x < -Settings.ViewDistance || viewChunkPos.x > Settings.ViewDistance ||
+                viewChunkPos.y < -Settings.ViewDistance || viewChunkPos.y > Settings.ViewDistance ||
+                viewChunkPos.z < -Settings.ViewDistance || viewChunkPos.z > Settings.ViewDistance
+            )
             {
-                chunk.RequestingStop = true;
+                chunk.IsActive = false;
             }
         }
         ActiveChunks.Clear();
@@ -229,7 +253,7 @@ public class World : MonoBehaviour
     bool GenerateVoxelMaps()
     {
         bool allGenerated = true;
-        int toGenerate = GenerateAtOnce;
+        int toGenerate = Settings.GenerateAtOnce;
         foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
@@ -259,6 +283,7 @@ public class World : MonoBehaviour
             Vector3Int checkCoord = PlayerChunk + coord;
             if (Chunks.TryGetValue(checkCoord, out var chunk))
             {
+                chunk.IsActive = true;
                 ActiveChunks.Add(chunk);
             }
         }
@@ -405,6 +430,17 @@ public class World : MonoBehaviour
         return new(x, y, z);
     }
 
+    public void GetAccessForPlayer()
+    {
+        for (VoxelFaces f = VoxelFaces.Back; f < VoxelFaces.Max; f++)
+        {
+            if (Chunks.TryGetValue(PlayerChunk + I3ToVI3(VoxelData.FaceChecks[(int)f]), out Chunk chunk))
+            {
+                chunk.VoxelMapAccess.Complete();
+            }
+        }
+    }
+
     public bool CheckForVoxel(Vector3 worldPos)
     {
         Vector3Int thisChunk = GetChunkCoordFromVector3(worldPos);
@@ -414,7 +450,7 @@ public class World : MonoBehaviour
             int3 block = GetPosInChunkFromVector3(thisChunk, worldPos);
 
             // TODO think something for it
-            chunk.VoxelMapAccess.Complete();
+            //chunk.VoxelMapAccess.Complete();
             return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
         }
         return false;
@@ -508,12 +544,15 @@ public struct GenerateStructuresJob : IJobParallelFor
 
     private readonly int3 ToChunkCoord(int3 pos)
     {
-        pos.x -= (pos.x < 0 && pos.x % Data.ChunkWidth != 0) ? Data.ChunkWidth : 0;
-        pos.y -= (pos.y < 0 && pos.y % Data.ChunkHeight != 0) ? Data.ChunkHeight : 0;
-        pos.z -= (pos.z < 0 && pos.z % Data.ChunkLength != 0) ? Data.ChunkLength : 0;
-        int x = pos.x / Data.ChunkWidth;
-        int y = pos.y / Data.ChunkHeight;
-        int z = pos.z / Data.ChunkLength;
+        //pos.x -= (pos.x < 0 && pos.x % Data.ChunkWidth != 0) ? Data.ChunkWidth : 0;
+        //pos.y -= (pos.y < 0 && pos.y % Data.ChunkHeight != 0) ? Data.ChunkHeight : 0;
+        //pos.z -= (pos.z < 0 && pos.z % Data.ChunkLength != 0) ? Data.ChunkLength : 0;
+        //int x = pos.x / Data.ChunkWidth;
+        //int y = pos.y / Data.ChunkHeight;
+        //int z = pos.z / Data.ChunkLength;
+        int x = (int)math.floor(pos.x / (float)Data.ChunkWidth);
+        int y = (int)math.floor(pos.y / (float)Data.ChunkHeight);
+        int z = (int)math.floor(pos.z / (float)Data.ChunkLength);
         return new(x, y, z);
     }
 }
@@ -524,4 +563,21 @@ public struct EmptyJob : IJob
     public void Execute()
     {
     }
+}
+
+[Serializable]
+public struct Settings
+{
+    public string Version;
+
+    [Header("Performance")]
+    public int ViewDistance;
+
+    [Header("Chunk Generation")]
+    public int GenerateAtOnce;
+    public float TimeBetweenGenerating;
+
+    [Header("Controls")]
+    [Range(0.1f, 50f)]
+    public float MouseSenstivity;
 }
