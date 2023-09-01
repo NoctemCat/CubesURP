@@ -48,6 +48,7 @@ public class StructureBuilder
     private void SortStructures()
     {
         if (_structures.Length <= 0) return;
+        _sortedStructures.Clear();
         _sortedStructures.EnsureCapacity(_structures.Length);
 
         for (int i = 0; i < _structures.Length; i++)
@@ -61,10 +62,10 @@ public class StructureBuilder
         }
 
         _structures.Clear();
-        AddSortedStructures().Forget();
+        AddSortedStructures();
     }
 
-    public async UniTaskVoid AddSortedStructures()
+    public void AddSortedStructures()
     {
         foreach (Vector3Int key in _sortedStructures.Keys)
         {
@@ -80,8 +81,7 @@ public class StructureBuilder
                 chunk = new(key);
                 World.Chunks[key] = chunk;
             }
-            await chunk.AddRangeModification(_sortedStructures[key]);
-            _sortedStructures[key].Clear();
+            chunk.AddRangeModification(_sortedStructures[key]).Forget();
         }
     }
 }

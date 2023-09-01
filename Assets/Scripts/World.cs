@@ -37,10 +37,12 @@ public class World : MonoBehaviour
     public NativeArray<Block> DummyMap { get; private set; }
 
     public StructureBuilder StructureBuilder { get; private set; }
+    public SaveSystem SaveSystem { get; private set; }
 
     List<Vector3Int> ViewCoords;
 
     List<Chunk> ActiveChunks;
+    List<Chunk> DisposedChunks;
 
     public Vector3Int PlayerChunk;
 
@@ -89,6 +91,7 @@ public class World : MonoBehaviour
         DummyMap = new(VoxelData.ChunkSize, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         ActiveChunks = new(10);
+        DisposedChunks = new(20);
 
         PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 50f, VoxelData.ChunkLength / 2);
 
@@ -96,11 +99,13 @@ public class World : MonoBehaviour
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
 
         StructureBuilder = new(this);
+        SaveSystem = new(this);
         //GenerateWorld();
         //EmptyJob dummy = new() { };
         //GeneratingStructures = dummy.Schedule();
 
         CheckDistance().Forget();
+        CheckDisposeChunks().Forget();
         //LastPlayerChunk = PlayerChunk;
         //GenerateVoxelMaps();
         //CheckStructures().Forget();
@@ -108,9 +113,14 @@ public class World : MonoBehaviour
 
     private void OnDestroy()
     {
+        foreach (var (cPos, chunk) in Chunks)
+        {
+            chunk.Dispose();
+        }
         VoxelData.Dispose();
         Blocks.Dispose();
         XYZMap.Dispose();
+
         for (int i = 0; i < Biomes.Length; i++)
         {
             Biomes[i].Dispose();
@@ -118,6 +128,7 @@ public class World : MonoBehaviour
         Biomes.Dispose();
 
         DummyMap.Dispose();
+
     }
 
     public void SaveSettings()
@@ -154,6 +165,8 @@ public class World : MonoBehaviour
         int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
         Chunks[chunkPos].AddModification(new(VI3ToI3(chunkPos), blockPos, block)).Forget();
 
+        SaveSystem.AddChunkToSave(Chunks[chunkPos]);
+
         if (blockPos.z == 0)
             Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
         else if (blockPos.z == VoxelData.ChunkLength - 1)
@@ -177,6 +190,8 @@ public class World : MonoBehaviour
     private void Update()
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+
+        SaveSystem.Update(Time.deltaTime);
 
         for (int i = 0; i < ActiveChunks.Count; i++)
         {
@@ -203,6 +218,55 @@ public class World : MonoBehaviour
 
     //    return false;
     //}
+
+    async UniTaskVoid CheckDisposeChunks()
+    {
+        List<Vector3Int> toRemove = new();
+        while (true)
+        {
+            foreach (var kvp in Chunks)
+            {
+                Vector3Int viewChunkPos = kvp.Key - PlayerChunk;
+                if (
+                    viewChunkPos.x < -Settings.ViewDistance - 2 || viewChunkPos.x > Settings.ViewDistance + 2 ||
+                    viewChunkPos.y < -Settings.ViewDistance - 2 || viewChunkPos.y > Settings.ViewDistance + 2 ||
+                    viewChunkPos.z < -Settings.ViewDistance - 2 || viewChunkPos.z > Settings.ViewDistance + 2
+                )
+                {
+                    //chunk.Dispose();
+                    DisposedChunks.Add(kvp.Value);
+                    toRemove.Add(kvp.Key);
+
+                    int i = ActiveChunks.IndexOf(kvp.Value);
+                    if (i != -1)
+                        ActiveChunks.RemoveAt(i);
+
+                }
+            }
+            for (int i = 0; i < toRemove.Count; i++)
+            {
+                Chunks.Remove(toRemove[i]);
+            }
+            toRemove.Clear();
+
+            await UniTask.WaitForSeconds(6f);
+
+            DisposeChunks().Forget();
+        }
+    }
+
+    async UniTaskVoid DisposeChunks()
+    {
+        await UniTask.WaitForSeconds(4f);
+        for (int i = 0; i < DisposedChunks.Count; i++)
+        {
+            DisposedChunks[i].Dispose();
+        }
+        DisposedChunks.Clear();
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+    }
 
     async UniTaskVoid CheckDistance()
     {
@@ -237,6 +301,7 @@ public class World : MonoBehaviour
             )
             {
                 chunk.IsActive = false;
+
             }
         }
         ActiveChunks.Clear();
@@ -250,10 +315,23 @@ public class World : MonoBehaviour
         foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
+
             if (!Chunks.ContainsKey(checkCoord))
             {
-                var chunk = new Chunk(checkCoord);
-                Chunks[checkCoord] = chunk;
+                string chunkName = GenerateChunkName(checkCoord);
+                if (File.Exists(Path.Combine(SaveSystem.SaveChunkPath, chunkName)))
+                {
+                    SaveSystem.LoadChunk(chunkName).ContinueWith(chunkData =>
+                    {
+                        var chunk = new Chunk(chunkData);
+                        Chunks[checkCoord] = chunk;
+                    });
+                }
+                else
+                {
+                    var chunk = new Chunk(checkCoord);
+                    Chunks[checkCoord] = chunk;
+                }
 
                 toGenerate--;
                 if (toGenerate <= 0)
@@ -389,6 +467,8 @@ public class World : MonoBehaviour
 
             // TODO think something for it
             chunk.VoxelMapAccess.Complete();
+
+            if (!chunk.IsActive) return false;
             return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
         }
         return false;
@@ -408,6 +488,9 @@ public class World : MonoBehaviour
     }
 
     private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
+
+    public string GenerateChunkName(int3 chunkPos) => $"Chunk-{chunkPos.x},{chunkPos.y},{chunkPos.z}";
+    public string GenerateChunkName(Vector3Int chunkPos) => $"Chunk-{chunkPos.x},{chunkPos.y},{chunkPos.z}";
 }
 
 [Serializable]

@@ -2103,7 +2103,7 @@ MonoBehaviour:
   isSprinting: 0
   ApplyGravity: 0
   walkSpeed: 3
-  sprintSpeed: 6
+  sprintSpeed: 20
   jumpForce: 7
   gravity: -15
   playerWidth: 0.3

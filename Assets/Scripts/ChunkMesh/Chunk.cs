@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using MemoryPack;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Collections.NotBurstCompatible;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.VisualScripting;
@@ -12,25 +14,15 @@ using UnityEngine.Rendering;
 
 using static CubesUtils;
 
-//[MemoryPackable]
-//public partial class ChunkData
-//{
-//    public int3 ChunkPos;
-
-//    public NativeArray<Block> VoxelMap;
-//}
-
-
-
 
 public class Chunk
 {
-    private readonly GameObject _chunkObject;
-    private readonly MeshRenderer _meshRenderer;
-    private readonly MeshFilter _meshFilter;
-    private readonly Mesh _chunkMesh;
-    private readonly Material[] _materials = new Material[2];
-    private readonly string _chunkName;
+    private GameObject _chunkObject;
+    private MeshRenderer _meshRenderer;
+    private MeshFilter _meshFilter;
+    private Mesh _chunkMesh;
+    private Material[] _materials = new Material[2];
+    public string ChunkName { get; private set; }
 
     private readonly World World;
     VoxelData Data;
@@ -39,10 +31,12 @@ public class Chunk
 
     public NativeArray<Block> VoxelMap { get; private set; }
     private NativeList<StructureMarker> _structures;
-    private NativeList<VoxelMod> _neighbourModifications;
+    public NativeList<VoxelMod> NeighbourModifications { get; private set; }
     private NativeList<VoxelMod> _modifications;
     private MeshDataHolder _holder;
 
+    private bool _isLoaded;
+    private bool _isDisposed;
     private bool _voxelMapGenerated;
     private bool _isGeneratingMesh;
     private bool _dirtyMesh;
@@ -66,10 +60,40 @@ public class Chunk
 
     public Chunk(Vector3Int chunkPos)
     {
+
+        World = World.Instance;
+        Init(chunkPos);
+        _isLoaded = false;
+
+        StartGenerating().Forget();
+    }
+    public Chunk(ChunkData chunkData)
+    {
+        World = World.Instance;
+        Init(chunkData.ChunkPos);
+        _isLoaded = true;
+
+        //StartGenerating().Forget();
+
+        //chunkData.VoxelMap.
+        VoxelMap.CopyFrom(chunkData.VoxelMap);
+        NeighbourModifications.CopyFromNBC(chunkData.NeighbourModifications);
+
+        _voxelMapGenerated = true;
+        _dirtyMesh = true;
+
+        World.CheckNeighbours(this);
+        if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
+        {
+            _initActions -= CheckNeighbours;
+        }
+    }
+
+    private void Init(Vector3Int chunkPos)
+    {
         _initActions += CheckNeighbours;
         _initActions += AddStructuresToWorld;
 
-        World = World.Instance;
         Data = World.VoxelData;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
         WorldPos = new(chunkPos.x * Data.ChunkWidth, chunkPos.y * Data.ChunkHeight, chunkPos.z * Data.ChunkLength);
@@ -87,7 +111,7 @@ public class Chunk
 
         VoxelMap = new(Data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
-        _neighbourModifications = new(256, Allocator.Persistent);
+        NeighbourModifications = new(512, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
         _holder.Init(ChunkPos);
 
@@ -95,6 +119,7 @@ public class Chunk
         _isGeneratingMesh = false;
         _requestingStop = false;
 
+        _isDisposed = false;
         _dirtyMesh = false;
         NeighboursGenerated = VoxelFlags.None;
 
@@ -108,8 +133,8 @@ public class Chunk
 
         _chunkObject.transform.SetParent(World.transform);
         _chunkObject.transform.position = WorldPos;
-        _chunkObject.name = $"Chunk {ChunkPos.x},{ChunkPos.y},{ChunkPos.z}";
-        _chunkName = _chunkObject.name;
+        _chunkObject.name = World.GenerateChunkName(ChunkPos);
+        ChunkName = _chunkObject.name;
 
         _chunkMesh = new Mesh()
         {
@@ -119,10 +144,6 @@ public class Chunk
         _meshFilter.mesh = _chunkMesh;
 
         IsActive = true;
-
-        //VoxelMap.ToArray()
-
-        StartGenerating().Forget();
     }
 
     //bool _safeDelete = false;
@@ -136,39 +157,42 @@ public class Chunk
         //{
         //    Delete();
         //}
-        _requestingStop = true;
+        //_requestingStop = true;
 
-        //Delete().Forget();
-        _neighbourModifications.Dispose();
-        _modifications.Dispose();
-        _structures.Dispose();
-        _holder.Dispose();
-        VoxelMap.Dispose();
+        ////Delete().Forget();
+        //NeighbourModifications.Dispose();
+        //_modifications.Dispose();
+        //_structures.Dispose();
+        //_holder.Dispose();
+        //VoxelMap.Dispose();
     }
 
-    public async UniTaskVoid SaveDelete()
+    //public async UniTaskVoid SaveDelete()
+    //{
+    //    //if (!_safeDelete) return;
+
+    //    if (_modifications.Length > 0)
+    //        await ApplyMods();
+
+    //    NeighbourModifications.Dispose();
+    //    _modifications.Dispose();
+    //    _structures.Dispose();
+    //    _holder.Dispose();
+
+    //    //await SaveVoxelMap();
+    //    VoxelMap.Dispose();
+    //}
+    public void Dispose()
     {
-        //if (!_safeDelete) return;
-
-        if (_modifications.Length > 0)
-            await ApplyMods();
-
-        _neighbourModifications.Dispose();
+        IsActive = false;
+        _isDisposed = true;
+        NeighbourModifications.Dispose();
         _modifications.Dispose();
         _structures.Dispose();
         _holder.Dispose();
-
-        //await SaveVoxelMap();
-        VoxelMap.Dispose();
-    }
-    public async UniTaskVoid Delete()
-    {
-        await VoxelMapAccess;
-        _neighbourModifications.Dispose();
-        _modifications.Dispose();
-        _structures.Dispose();
-        _holder.Dispose();
-        VoxelMap.Dispose();
+        UnityEngine.Object.Destroy(_chunkMesh);
+        UnityEngine.Object.Destroy(_chunkObject);
+        VoxelMapAccess = VoxelMap.Dispose(VoxelMapAccess);
     }
 
 
@@ -237,14 +261,16 @@ public class Chunk
 
         _initActions -= AddStructuresToWorld;
 
-        if (_neighbourModifications.Length > 0)
+        if (NeighbourModifications.Length > 0)
         {
-            World.StructureBuilder.AddStructures(_neighbourModifications);
+            World.StructureBuilder.AddStructures(NeighbourModifications);
         }
     }
 
     public void Update()
     {
+        //if (_isDisposed) return;
+
         _initActions?.Invoke();
 
         //if (Input.GetKeyDown(KeyCode.LeftAlt))
@@ -279,11 +305,14 @@ public class Chunk
         _modifications.Add(mod);
     }
 
+    // Right now it's only being used when adding structures from generation,
     public async UniTask AddRangeModification(List<VoxelMod> mod)
     {
+        if (_isLoaded) return;
         //Debug.Log(mod.Count);
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
+        if (_isDisposed) return;
         _modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
     }
 
@@ -294,20 +323,8 @@ public class Chunk
 
     async UniTaskVoid StartGenerating()
     {
-        //if (File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name)))
-        //{
-        //    _isGeneratingMesh = true;
-        //    await LoadVoxelMap();
-        //    _isGeneratingMesh = false;
-        //}
-        //else
-        //{
-        //    VoxelMapAccess = GenerateVoxelMap();
-        //    await VoxelMapAccess;
-        //}
         VoxelMapAccess = GenerateVoxelMap();
         await VoxelMapAccess;
-
 
         _structures.Clear();
 
@@ -363,7 +380,7 @@ public class Chunk
             Structures = _structures.AsDeferredJobArray(),
 
             VoxelMap = VoxelMap,
-            NeighbourModifications = _neighbourModifications.AsParallelWriter(),
+            NeighbourModifications = NeighbourModifications.AsParallelWriter(),
         };
 
         JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
@@ -375,7 +392,7 @@ public class Chunk
     async UniTask<bool> GenerateMesh()
     {
         if (_modifications.Length > 0)
-            ApplyMods().Forget();
+            ApplyMods();
 
         VoxelMapAccess = _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
@@ -401,17 +418,17 @@ public class Chunk
     }
 
 
-    private async UniTask ApplyMods()
+    private void ApplyMods()
     {
-        //NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
-        //for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
-        //{
-        //    if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
-        //        neighbours.Add(chunk.VoxelMapAccess);
-        //}
-        //neighbours.Add(VoxelMapAccess);
+        NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
+        for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
+        {
+            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+                neighbours.Add(chunk.VoxelMapAccess);
+        }
+        neighbours.Add(VoxelMapAccess);
 
-        NativeArray<VoxelMod> mods = _modifications.ToArray(Allocator.TempJob);
+        NativeArray<VoxelMod> mods = _modifications.ToArray(Allocator.Persistent);
         _modifications.Clear();
 
         ApplyModsJob applyModsJob = new()
@@ -420,10 +437,8 @@ public class Chunk
             Modifications = mods,
             VoxelMap = VoxelMap,
         };
-        VoxelMapAccess = applyModsJob.Schedule(mods.Length, 4, VoxelMapAccess);
-        _ = mods.Dispose(VoxelMapAccess);
-
-        await VoxelMapAccess;
+        VoxelMapAccess = applyModsJob.Schedule(mods.Length, 4, JobHandle.CombineDependencies(neighbours.AsArray()));
+        mods.Dispose(VoxelMapAccess);
     }
 }
 

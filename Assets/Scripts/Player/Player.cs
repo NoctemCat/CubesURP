@@ -6,6 +6,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+#pragma warning disable UNT0006
+
 public class Player : MonoBehaviour
 {
     public bool isGrounded;
