@@ -89,6 +89,10 @@ public struct MeshDataHolder
 
         return sumBlockTypes.Schedule(voxelMapAccess);
     }
+    //public void PrintTotals()
+    //{
+    //    Debug.Log($"{CountBlocks[0]} / {CountBlocks[1]} / {CountBlocks[2]}");
+    //}
 
     public void ResizeFacesData()
     {
@@ -102,7 +106,7 @@ public struct MeshDataHolder
         FacesData.TransparentFaces.Capacity = CountBlocks[1] * 6;
     }
 
-    public JobHandle SortVoxels(NativeArray<Block> voxelMap)
+    public JobHandle SortVoxels(JobHandle voxelMapAccess, NativeArray<Block> voxelMap)
     {
         // TODO add neighbours
         JobHandle access = FillNeighbours(out Neighbours neighbours);
@@ -119,7 +123,7 @@ public struct MeshDataHolder
             TransparentFaces = FacesData.TransparentFaces.AsParallelWriter(),
         };
         //return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, voxelMapAccess);
-        return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, access);
+        return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, JobHandle.CombineDependencies(voxelMapAccess, access));
     }
 
     public JobHandle FillNeighbours(out Neighbours neighbours)

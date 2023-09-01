@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3004210461191035696}
   - component: {fileID: 2259829669281394501}
   m_Layer: 5
-  m_Name: Item 1
+  m_Name: InventorySlot
   m_TagString: UI Inventory Slot
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -84,7 +84,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -7, y: 4}
+  m_AnchoredPosition: {x: -7, y: 6}
   m_SizeDelta: {x: 48, y: 48}
   m_Pivot: {x: 1, y: 0}
 --- !u!222 &3772417433917703005
@@ -115,10 +115,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: '
+
+'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 4e95bd615e9941e4580b2f0e49098142, type: 2}
-  m_sharedMaterial: {fileID: 1633959666543885196, guid: 4e95bd615e9941e4580b2f0e49098142,
+  m_fontAsset: {fileID: 11400000, guid: 777346de13864b1458206c366d8f8fc0, type: 2}
+  m_sharedMaterial: {fileID: -7400011078926424124, guid: 777346de13864b1458206c366d8f8fc0,
     type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -143,8 +145,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 22
-  m_fontSizeBase: 22
+  m_fontSize: 16
+  m_fontSizeBase: 16
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

@@ -5,12 +5,23 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
-using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 using static CubesUtils;
+
+//[MemoryPackable]
+//public partial class ChunkData
+//{
+//    public int3 ChunkPos;
+
+//    public NativeArray<Block> VoxelMap;
+//}
+
+
+
 
 public class Chunk
 {
@@ -19,6 +30,7 @@ public class Chunk
     private readonly MeshFilter _meshFilter;
     private readonly Mesh _chunkMesh;
     private readonly Material[] _materials = new Material[2];
+    private readonly string _chunkName;
 
     private readonly World World;
     VoxelData Data;
@@ -27,6 +39,7 @@ public class Chunk
 
     public NativeArray<Block> VoxelMap { get; private set; }
     private NativeList<StructureMarker> _structures;
+    private NativeList<VoxelMod> _neighbourModifications;
     private NativeList<VoxelMod> _modifications;
     private MeshDataHolder _holder;
 
@@ -70,11 +83,11 @@ public class Chunk
         //WorldPoints[5] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, 0f);
         //WorldPoints[6] = WorldPos + new Vector3(0f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
         //WorldPoints[7] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
-
         //WorldPoints[8] = WorldPos + new Vector3(Data.ChunkWidth + 1f / 2f, Data.ChunkHeight + 1f / 2f, Data.ChunkLength + 1f / 2f);
 
         VoxelMap = new(Data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
+        _neighbourModifications = new(256, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
         _holder.Init(ChunkPos);
 
@@ -95,7 +108,8 @@ public class Chunk
 
         _chunkObject.transform.SetParent(World.transform);
         _chunkObject.transform.position = WorldPos;
-        _chunkObject.name = $"Chunk {ChunkPos.x}/{ChunkPos.y}/{ChunkPos.z}";
+        _chunkObject.name = $"Chunk {ChunkPos.x},{ChunkPos.y},{ChunkPos.z}";
+        _chunkName = _chunkObject.name;
 
         _chunkMesh = new Mesh()
         {
@@ -106,16 +120,107 @@ public class Chunk
 
         IsActive = true;
 
+        //VoxelMap.ToArray()
+
         StartGenerating().Forget();
     }
 
+    //bool _safeDelete = false;
     ~Chunk()
     {
-        VoxelMap.Dispose();
+        //if (_safeDelete)
+        //{
+        //    SaveDelete().Forget();
+        //}
+        //else
+        //{
+        //    Delete();
+        //}
+        _requestingStop = true;
+
+        //Delete().Forget();
+        _neighbourModifications.Dispose();
         _modifications.Dispose();
         _structures.Dispose();
         _holder.Dispose();
+        VoxelMap.Dispose();
     }
+
+    public async UniTaskVoid SaveDelete()
+    {
+        //if (!_safeDelete) return;
+
+        if (_modifications.Length > 0)
+            await ApplyMods();
+
+        _neighbourModifications.Dispose();
+        _modifications.Dispose();
+        _structures.Dispose();
+        _holder.Dispose();
+
+        //await SaveVoxelMap();
+        VoxelMap.Dispose();
+    }
+    public async UniTaskVoid Delete()
+    {
+        await VoxelMapAccess;
+        _neighbourModifications.Dispose();
+        _modifications.Dispose();
+        _structures.Dispose();
+        _holder.Dispose();
+        VoxelMap.Dispose();
+    }
+
+
+    //public async UniTask SaveVoxelMap()
+    //{
+    //    if (!_safeDelete) return;
+
+    //    Directory.CreateDirectory(Path.Combine(World.AppPath, "saves"));
+    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Create, FileAccess.Write);
+
+    //    Block[] arr = new Block[VoxelMap.Length];
+    //    await VoxelMapAccess;
+    //    VoxelMap.CopyTo(arr);
+    //    await MemoryPackSerializer.SerializeAsync(stream, arr);
+    //}
+
+    ////C:\Users\ya7ko\AppData\LocalLow\DefaultCompany\CubesURP\Prototype\saves
+    //public async UniTask LoadVoxelMap()
+    //{
+    //    if (!File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name))) return;
+
+    //    await UniTask.SwitchToMainThread();
+    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Open, FileAccess.Read);
+
+    //    int byteCount = sizeof(Block) * Data.ChunkSize;
+    //    byte[] bytes = new byte[byteCount];
+    //    await stream.ReadAsync(bytes, 0, byteCount);
+
+    //    NativeArray<Block> temp = VoxelMap;
+    //    var val = MemoryPackSerializer.Deserialize(bytes, ref temp);
+    //    VoxelMap = temp;
+    //}
+
+    //public async UniTask LoadVoxelMapNorm()
+    //{
+    //    if (!File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name))) return;
+
+    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Open, FileAccess.Read);
+
+    //    //int byteCount = sizeof(Block) * Data.ChunkSize;
+    //    //byte[] bytes = new byte[byteCount];
+    //    //stream.Read(bytes, 0, byteCount);
+    //    UnsafeAppendBuffer buffer;
+    //    //buffer.
+
+    //    //NativeArray<Block> temp = VoxelMap;
+    //    var arr = await MemoryPackSerializer.DeserializeAsync<Block[]>(stream);
+    //    await VoxelMapAccess;
+    //    VoxelMap.CopyFrom(arr);
+    //    //Debug.Log(temp.Length);
+    //    //VoxelMap = temp;
+    //}
 
     public void CheckNeighbours()
     {
@@ -132,12 +237,9 @@ public class Chunk
 
         _initActions -= AddStructuresToWorld;
 
-        if (_structures.Length > 0)
+        if (_neighbourModifications.Length > 0)
         {
-            World.StructureBuilder.AddStructures(_structures).ContinueWith(() =>
-            {
-                _structures.Clear();
-            });
+            World.StructureBuilder.AddStructures(_neighbourModifications);
         }
     }
 
@@ -145,12 +247,20 @@ public class Chunk
     {
         _initActions?.Invoke();
 
+        //if (Input.GetKeyDown(KeyCode.LeftAlt))
+        //{
+        //    SaveVoxelMap().Forget();
+        //}
+        //if (Input.GetKeyDown(KeyCode.Tab))
+        //{
+        //    LoadVoxelMapNorm();
+        //}
         if (_modifications.Length > 0 && !_isGeneratingMesh)
         {
             _dirtyMesh = true;
         }
 
-        if (_dirtyMesh && !_isGeneratingMesh)
+        if (_voxelMapGenerated && _dirtyMesh && !_isGeneratingMesh)
         {
             StartMeshGen().Forget();
         }
@@ -163,13 +273,15 @@ public class Chunk
 
     public async UniTaskVoid AddModification(VoxelMod mod)
     {
+        //_safeDelete = true;
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
         _modifications.Add(mod);
     }
 
-    public async UniTaskVoid AddRangeModification(List<VoxelMod> mod)
+    public async UniTask AddRangeModification(List<VoxelMod> mod)
     {
+        //Debug.Log(mod.Count);
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
         _modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
@@ -182,11 +294,25 @@ public class Chunk
 
     async UniTaskVoid StartGenerating()
     {
+        //if (File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name)))
+        //{
+        //    _isGeneratingMesh = true;
+        //    await LoadVoxelMap();
+        //    _isGeneratingMesh = false;
+        //}
+        //else
+        //{
+        //    VoxelMapAccess = GenerateVoxelMap();
+        //    await VoxelMapAccess;
+        //}
         VoxelMapAccess = GenerateVoxelMap();
-        _dirtyMesh = true;
-
         await VoxelMapAccess;
+
+
+        _structures.Clear();
+
         _voxelMapGenerated = true;
+        _dirtyMesh = true;
 
         World.CheckNeighbours(this);
         if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
@@ -197,6 +323,8 @@ public class Chunk
 
     private async UniTaskVoid StartMeshGen()
     {
+        //count++;
+        //if (count > 1)
         _isGeneratingMesh = true;
         //DirtyMesh = false;
 
@@ -226,7 +354,22 @@ public class Chunk
             VoxelMap = VoxelMap,
             Structures = _structures.AsParallelWriter(),
         };
-        return generateChunk.Schedule(VoxelMap.Length, 8);
+
+        BuildStructuresJob buildStructures = new()
+        {
+            Data = Data,
+            Biomes = World.Biomes,
+            ChunkPos = ChunkPos,
+            Structures = _structures.AsDeferredJobArray(),
+
+            VoxelMap = VoxelMap,
+            NeighbourModifications = _neighbourModifications.AsParallelWriter(),
+        };
+
+        JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
+        JobHandle structuresHandle = buildStructures.Schedule(_structures, 8, generateHandle);
+
+        return structuresHandle;
     }
 
     async UniTask<bool> GenerateMesh()
@@ -241,7 +384,7 @@ public class Chunk
         if (_requestingStop) return false;
         _holder.ResizeFacesData();
 
-        VoxelMapAccess = _holder.SortVoxels(VoxelMap);
+        VoxelMapAccess = _holder.SortVoxels(VoxelMapAccess, VoxelMap);
         await VoxelMapAccess;
 
         if (_requestingStop) return false;
@@ -254,32 +397,33 @@ public class Chunk
 
         _holder.BuildMesh(_chunkMesh);
 
-        //_holder.
-
         return true;
     }
 
 
-    private async UniTaskVoid ApplyMods()
+    private async UniTask ApplyMods()
     {
-        NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
-        for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
-        {
-            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
-                neighbours.Add(chunk.VoxelMapAccess);
-        }
-        neighbours.Add(VoxelMapAccess);
+        //NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
+        //for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
+        //{
+        //    if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+        //        neighbours.Add(chunk.VoxelMapAccess);
+        //}
+        //neighbours.Add(VoxelMapAccess);
+
+        NativeArray<VoxelMod> mods = _modifications.ToArray(Allocator.TempJob);
+        _modifications.Clear();
 
         ApplyModsJob applyModsJob = new()
         {
             Data = Data,
-            Modifications = _modifications.AsArray(),
+            Modifications = mods,
             VoxelMap = VoxelMap,
         };
-        VoxelMapAccess = applyModsJob.Schedule(_modifications.Length, 1, JobHandle.CombineDependencies(neighbours.AsArray()));
+        VoxelMapAccess = applyModsJob.Schedule(mods.Length, 4, VoxelMapAccess);
+        _ = mods.Dispose(VoxelMapAccess);
 
         await VoxelMapAccess;
-        _modifications.Clear();
     }
 }
 
@@ -295,7 +439,7 @@ public struct GenerateChunkJob : IJobParallelFor
     [ReadOnly]
     public int3 ChunkPos;
 
-    [WriteOnly]
+    //[WriteOnly]
     //[NativeDisableContainerSafetyRestriction]
     public NativeArray<Block> VoxelMap;
 
@@ -306,19 +450,24 @@ public struct GenerateChunkJob : IJobParallelFor
     public void Execute(int i)
     {
         //ref var voxelData = ref VoxelDataRef.Data.Value;
-        int3 scaledPos = new(
-            ChunkPos.x * Data.ChunkWidth + XYZMap[i].x,
-            ChunkPos.y * Data.ChunkHeight + XYZMap[i].y,
-            ChunkPos.z * Data.ChunkLength + XYZMap[i].z
-        );
+        //int3 scaledPos = new(
+        //    ChunkPos.x * Data.ChunkWidth + XYZMap[i].x,
+        //    ChunkPos.y * Data.ChunkHeight + XYZMap[i].y,
+        //    ChunkPos.z * Data.ChunkLength + XYZMap[i].z
+        //);
 
         //int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
         //int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
         //int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
         // pos in chunk XYZMap[i]
         // chunk pos ChunkPos
+        int3 scaledPos = ChunkPos * Data.ChunkDimensions + XYZMap[i];
 
         VoxelMap[i] = GetVoxel(ChunkPos, scaledPos);
+
+        //VoxelMap[i] = Block.Bedrock;
+        //Debug.Log(scaledPos);
+        //Debug.Log(VoxelMap[i]);
     }
 
     public Block GetVoxel(int3 chunkPos, int3 pos)
@@ -399,7 +548,6 @@ public struct GenerateChunkJob : IJobParallelFor
         {
             if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, biome.FloraZoneScale) > biome.FloraZoneThreshold)
             {
-                // Checking transparentness
                 if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.FloraPlacementScale) > biome.FloraPlacementThreshold)
                 {
                     Structures.AddNoResize(new(strongestBiomeIndex, pos, biome.FloraType));
@@ -409,8 +557,124 @@ public struct GenerateChunkJob : IJobParallelFor
 
         return voxelValue;
     }
+}
+
+[BurstCompile]
+public struct BuildStructuresJob : IJobParallelForDefer
+{
+    [ReadOnly]
+    public VoxelData Data;
+    [ReadOnly]
+    public NativeArray<BiomeStruct> Biomes;
+    [ReadOnly]
+    public int3 ChunkPos;
+    [ReadOnly]
+    public NativeArray<StructureMarker> Structures;
+
+    [WriteOnly]
+    public NativeList<VoxelMod>.ParallelWriter NeighbourModifications;
+    [WriteOnly]
+    [NativeDisableContainerSafetyRestriction]
+    public NativeArray<Block> VoxelMap;
+
+    public void Execute(int i)
+    {
+        var biome = Biomes[Structures[i].BiomeIndex];
+        switch (Structures[i].Type)
+        {
+            case StructureType.Tree:
+                MakeTree(Structures[i].Position, biome.MinHeight, biome.MaxHeight);
+                break;
+            case StructureType.Cactus:
+                MakeCacti(Structures[i].Position, biome.MinHeight, biome.MaxHeight);
+                break;
+        }
+    }
+
+    private void MakeTree(int3 pos, int minTrunkHeight, int maxTrunkHeight)
+    {
+        NativeList<int3> list = new(20, Allocator.Temp);
+
+        int height = (int)(maxTrunkHeight * Get2DPerlin(Data, new(pos.x, pos.z), 2000f, 3f));
+
+        if (height < minTrunkHeight)
+        {
+            height = minTrunkHeight;
+        }
+
+        // Trunk
+        for (int i = 1; i < height; i++)
+        {
+            Add(ref list, new(pos.x, pos.y + i, pos.z), Block.Wood);
+        }
+
+        // Leaves
+        for (int x = -2; x < 3; x++)
+        {
+            for (int z = -2; z < 3; z++)
+            {
+                Add(ref list, new(pos.x + x, pos.y + height - 2, pos.z + z), Block.Leaves);
+                Add(ref list, new(pos.x + x, pos.y + height - 3, pos.z + z), Block.Leaves);
+            }
+        }
+
+        for (int x = -1; x < 2; x++)
+        {
+            for (int z = -1; z < 2; z++)
+            {
+                Add(ref list, new(pos.x + x, pos.y + height - 1, pos.z + z), Block.Leaves);
+            }
+        }
+        for (int x = -1; x < 2; x++)
+        {
+            if (x == 0)
+                for (int z = -1; z < 2; z++)
+                {
+                    Add(ref list, new(pos.x + x, pos.y + height, pos.z + z), Block.Leaves);
+                }
+            else
+                Add(ref list, new(pos.x + x, pos.y + height, pos.z), Block.Leaves);
+        }
+    }
+
+    private void MakeCacti(int3 pos, int minTrunkHeight, int maxTrunkHeight)
+    {
+        NativeList<int3> list = new(20, Allocator.Temp);
+
+        int height = (int)(maxTrunkHeight * Get2DPerlin(Data, new(pos.x, pos.z), 1246f, 2f));
+
+        if (height < minTrunkHeight)
+        {
+            height = minTrunkHeight;
+        }
+
+        // Trunk
+        for (int i = 1; i < height; i++)
+        {
+            Add(ref list, new(pos.x, pos.y + i, pos.z), Block.Cactus);
+        }
+    }
 
 
+    private void Add(ref NativeList<int3> list, int3 worldPos, Block block)
+    {
+        if (!list.Contains(worldPos))
+        {
+            int3 cPos = ToChunkCoord(worldPos);
+            int3 pos = GetPosInChunk(cPos, worldPos);
+            if (ChunkPos.Equals(cPos))
+                VoxelMap[CalcIndex(pos)] = block;
+            else
+                NeighbourModifications.AddNoResize(new VoxelMod(cPos, pos, block));
+
+            list.Add(pos);
+        }
+    }
+
+    private readonly int3 ToChunkCoord(int3 pos) => (int3)math.floor(pos / (float3)Data.ChunkDimensions);
+    private readonly int3 GetPosInChunk(int3 chunkPos, int3 worldPos) => worldPos - (chunkPos * Data.ChunkDimensions);
+    readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
+    //private readonly int3 IsInChunk(int3 pos) => worldPos - (chunkPos * Data.ChunkDimensions);
 }
 
 [BurstCompile]

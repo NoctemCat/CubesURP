@@ -64,10 +64,12 @@ public struct Neighbours
 
 public struct VoxelMod
 {
+    public int3 ChunkPos;
     public int3 Position;
     public Block Block;
 
-    public VoxelMod(int3 _pos, Block _block) => (Position, Block) = (_pos, _block);
+    public VoxelMod(int3 _chunkPos, int3 _pos, Block _block)
+        => (ChunkPos, Position, Block) = (_chunkPos, _pos, _block);
 }
 
 public struct VoxelDataForMesh

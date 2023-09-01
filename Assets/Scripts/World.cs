@@ -8,6 +8,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Serialization.Binary;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using static CubesUtils;
@@ -53,12 +54,16 @@ public class World : MonoBehaviour
         }
     }
 
+    public string AppPath { get; private set; }
+
     private void Awake()
     {
         if (Instance == null)
             Instance = this;
         else
             Destroy(Instance);
+
+        AppPath = Path.Combine(Application.persistentDataPath, WorldData.WorldName);
 
         LoadSettings();
 
@@ -76,6 +81,7 @@ public class World : MonoBehaviour
         }
         Biomes = biomesTemp;
 
+        //Debug.Log(Settings.ViewDistance);
         ViewCoords = WorldHelper.InitViewCoords(Settings.ViewDistance);
 
         Chunks = new(ViewCoords.Count);
@@ -84,7 +90,7 @@ public class World : MonoBehaviour
 
         ActiveChunks = new(10);
 
-        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 100, VoxelData.ChunkLength / 2);
+        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 50f, VoxelData.ChunkLength / 2);
 
         //LastPlayerChunk = new(-1000, -1000, -1000);
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
@@ -95,6 +101,8 @@ public class World : MonoBehaviour
         //GeneratingStructures = dummy.Schedule();
 
         CheckDistance().Forget();
+        //LastPlayerChunk = PlayerChunk;
+        //GenerateVoxelMaps();
         //CheckStructures().Forget();
     }
 
@@ -107,6 +115,7 @@ public class World : MonoBehaviour
         {
             Biomes[i].Dispose();
         }
+        Biomes.Dispose();
 
         DummyMap.Dispose();
     }
@@ -143,7 +152,7 @@ public class World : MonoBehaviour
     {
         Vector3Int chunkPos = GetChunkCoordFromVector3(worldPos);
         int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
-        Chunks[chunkPos].AddModification(new(blockPos, block)).Forget();
+        Chunks[chunkPos].AddModification(new(VI3ToI3(chunkPos), blockPos, block)).Forget();
 
         if (blockPos.z == 0)
             Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();

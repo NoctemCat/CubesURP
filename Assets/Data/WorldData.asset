@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: WorldData
   m_EditorClassIdentifier: 
   Seed: fdsfds
+  WorldName: Prototype

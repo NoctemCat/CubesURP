@@ -4,4 +4,5 @@ using UnityEngine;
 public class WorldData : ScriptableObject
 {
     public string Seed;
+    public string WorldName;
 }
