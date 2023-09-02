@@ -1,44 +1,38 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 [System.Serializable]
 [CreateAssetMenu(fileName = "BlockType", menuName = "Cubes/Block Type")]
 public class BlockObject : ItemObject
 {
-    public Block blockType;
-    public bool isSolid;
-    public bool isTransparent;
+    public Block BlockType;
+    public bool IsSolid;
+    public bool IsTransparent;
 
     [Header("Texture Values")]
-    public int backfaceTexture;
-    public int frontfaceTexture;
-    public int topfaceTexture;
-    public int bottomfaceTexture;
-    public int leftfaceTexture;
-    public int rightfaceTexture;
+    public int BackfaceTexture;
+    public int FrontfaceTexture;
+    public int TopfaceTexture;
+    public int BottomfaceTexture;
+    public int LeftfaceTexture;
+    public int RightfaceTexture;
 
     // Back, Front, Top, Bottom, Left, Right
     public int GetTextureID(int faceIndex)
     {
-        switch (faceIndex)
+        return faceIndex switch
         {
-            case 0:
-                return backfaceTexture;
-            case 1:
-                return frontfaceTexture;
-            case 2:
-                return topfaceTexture;
-            case 3:
-                return bottomfaceTexture;
-            case 4:
-                return leftfaceTexture;
-            case 5:
-                return rightfaceTexture;
-            default:
-                Debug.Log("Error in GetTextureID; invalid face index");
-                return 0;
-        }
+            0 => BackfaceTexture,
+            1 => FrontfaceTexture,
+            2 => TopfaceTexture,
+            3 => BottomfaceTexture,
+            4 => LeftfaceTexture,
+            5 => RightfaceTexture,
+            _ => throw new ArgumentOutOfRangeException("Invalid face index"),
+        };
     }
 
     private void Reset()
@@ -52,49 +46,41 @@ public class BlockObject : ItemObject
 public struct BlockStruct
 {
 
-    public bool isSolid;
-    public bool isTransparent;
+    public bool IsSolid;
+    public bool IsTransparent;
 
-    public int backfaceTexture;
-    public int frontfaceTexture;
-    public int topfaceTexture;
-    public int bottomfaceTexture;
-    public int leftfaceTexture;
-    public int rightfaceTexture;
+    public int BackfaceTexture;
+    public int FrontfaceTexture;
+    public int TopfaceTexture;
+    public int BottomfaceTexture;
+    public int LeftfaceTexture;
+    public int RightfaceTexture;
 
     public BlockStruct(BlockObject block)
     {
-        isSolid = block.isSolid;
-        isTransparent = block.isTransparent;
+        IsSolid = block.IsSolid;
+        IsTransparent = block.IsTransparent;
 
-        backfaceTexture = block.backfaceTexture;
-        frontfaceTexture = block.frontfaceTexture;
-        topfaceTexture = block.topfaceTexture;
-        bottomfaceTexture = block.bottomfaceTexture;
-        leftfaceTexture = block.leftfaceTexture;
-        rightfaceTexture = block.rightfaceTexture;
+        BackfaceTexture = block.BackfaceTexture;
+        FrontfaceTexture = block.FrontfaceTexture;
+        TopfaceTexture = block.TopfaceTexture;
+        BottomfaceTexture = block.BottomfaceTexture;
+        LeftfaceTexture = block.LeftfaceTexture;
+        RightfaceTexture = block.RightfaceTexture;
     }
 
     // Back, Front, Top, Bottom, Left, Right
     public readonly int GetTextureID(int faceIndex)
     {
-        switch (faceIndex)
+        return faceIndex switch
         {
-            case 0:
-                return backfaceTexture;
-            case 1:
-                return frontfaceTexture;
-            case 2:
-                return topfaceTexture;
-            case 3:
-                return bottomfaceTexture;
-            case 4:
-                return leftfaceTexture;
-            case 5:
-                return rightfaceTexture;
-            default:
-                Debug.Log("Error in GetTextureID; invalid face index");
-                return 0;
-        }
+            0 => BackfaceTexture,
+            1 => FrontfaceTexture,
+            2 => TopfaceTexture,
+            3 => BottomfaceTexture,
+            4 => LeftfaceTexture,
+            5 => RightfaceTexture,
+            _ => throw new ArgumentOutOfRangeException("Invalid face index"),
+        };
     }
 }

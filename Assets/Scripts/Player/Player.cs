@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -84,7 +85,7 @@ public class Player : MonoBehaviour
 
         //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
         BlockObject blockObjetc = World.GetVoxel(highlightBlock.position);
-        if (blockObjetc.blockType != Block.Air)
+        if (blockObjetc.BlockType != Block.Air)
         {
             World.PlaceBlock(highlightBlock.position, 0);
 
@@ -100,7 +101,7 @@ public class Player : MonoBehaviour
         BlockObject blockObjet = World.GetVoxel(placeBlock.position);
 
         if (
-            blockObjet.blockType != Block.Air ||
+            blockObjet.BlockType != Block.Air ||
             !placeBlock.gameObject.activeSelf ||
             !value.isPressed
         ) return;
@@ -137,7 +138,7 @@ public class Player : MonoBehaviour
 
 #pragma warning restore IDE0051
 
-    private void Start()
+    private async UniTaskVoid Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
         _lookFrom = transform.GetChild(1);
@@ -149,18 +150,17 @@ public class Player : MonoBehaviour
 
         gameObject.SetActive(false);
 
-        Activate().Forget();
-    }
-
-    private async UniTaskVoid Activate()
-    {
         await UniTask.WaitForSeconds(0.5f);
         gameObject.SetActive(true);
+        //var blok = CubesUtils.GetIntersectedWorldBlocksD(new(0f, 0f, 0f), new(0, 5f, 4f));
+        //foreach (var b in blok)
+        //{
+        //    Debug.Log(b);
+        //}
     }
 
     private void OnDestroy()
     {
-        Debug.Log("Player desroyed");
     }
 
     private void FixedUpdate()
@@ -224,73 +224,29 @@ public class Player : MonoBehaviour
 
     private void PlaceCursorBlock()
     {
-        Vector3 lastPos = new();
+        bool disable = true;
+        var cast = new VoxelRaycast(null);
 
-        World.GetAccessForPlayer();
-
-
-
-        for (float step = checkIncrement; step < reach; step += checkIncrement)
+        cast.Raycast(_lookFrom.position, _lookFrom.forward, reach, (Vector3Int block, Vector3Int faceNormal) =>
         {
-            Vector3 pos = _lookFrom.position + (_lookFrom.forward * step);
+            bool isSolid = World.CheckForVoxel(block);
 
-            if (World.CheckForVoxel(pos))
+            if (isSolid)
             {
-                //World.GetChunkCoordFromVector3(pos)
-                highlightBlock.position = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
-                //placeBlock.position = lastPos;
-
-                float xCheck = pos.x % 1;
-                if (xCheck > 0.5f)
-                    xCheck--;
-                else if (xCheck < -0.5f)
-                    xCheck++;
-                float yCheck = pos.y % 1;
-                if (yCheck > 0.5f)
-                    yCheck--;
-                else if (yCheck < -0.5f)
-                    yCheck++;
-                float zCheck = pos.z % 1;
-                if (zCheck > 0.5f)
-                    zCheck--;
-                else if (zCheck < -0.5f)
-                    zCheck++;
-
-                if (Mathf.Abs(xCheck) < Mathf.Abs(yCheck) && Mathf.Abs(xCheck) < Mathf.Abs(zCheck))
-                {
-                    // place block on x axis
-                    if (xCheck < 0)
-                        placeBlock.position = highlightBlock.position + Vector3.right;
-                    else
-                        placeBlock.position = highlightBlock.position + Vector3.left;
-                }
-                else if (Mathf.Abs(zCheck) < Mathf.Abs(yCheck) && Mathf.Abs(zCheck) < Mathf.Abs(xCheck))
-                {
-                    // place block on z axis
-                    if (zCheck < 0)
-                        placeBlock.position = highlightBlock.position + Vector3.forward;
-                    else
-                        placeBlock.position = highlightBlock.position + Vector3.back;
-                }
-                else
-                {
-                    // place block on y axis by default
-                    if (yCheck < 0)
-                        placeBlock.position = highlightBlock.position + Vector3.up;
-                    else
-                        placeBlock.position = highlightBlock.position + Vector3.down;
-                }
-
+                disable = false;
+                highlightBlock.position = block;
+                placeBlock.position = block + faceNormal;
                 highlightBlock.gameObject.SetActive(true);
                 placeBlock.gameObject.SetActive(true);
-
-                return;
             }
-            lastPos = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y), Mathf.FloorToInt(pos.z));
-        }
+            return isSolid;
+        });
 
-        highlightBlock.gameObject.SetActive(false);
-        placeBlock.gameObject.SetActive(false);
+        if (disable)
+        {
+            highlightBlock.gameObject.SetActive(false);
+            placeBlock.gameObject.SetActive(false);
+        }
     }
 
     private float CheckDownSpeed(float downSpeed)

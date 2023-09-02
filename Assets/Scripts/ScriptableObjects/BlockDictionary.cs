@@ -29,7 +29,7 @@ public class BlockDictionary : ScriptableObject
         for (int i = 0; i < _blocks.Length; i++)
         {
             if (_blocks[i] == null) continue;
-            _blocksDict[_blocks[i].blockType] = _blocks[i];
+            _blocksDict[_blocks[i].BlockType] = _blocks[i];
         }
 
         for (Block block = Block.Air; block < Block.Invalid; block++)

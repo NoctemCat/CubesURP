@@ -21,12 +21,12 @@ public class BlockTypesEditor : Editor
         base.OnInspectorGUI();
         blockAtlas = (Texture2DArray)Resources.Load("BlockAtlas");
 
-        Texture2D backface = PrepareTexture(block.backfaceTexture);
-        Texture2D frontface = PrepareTexture(block.frontfaceTexture);
-        Texture2D topface = PrepareTexture(block.topfaceTexture);
-        Texture2D bottomface = PrepareTexture(block.bottomfaceTexture);
-        Texture2D leftface = PrepareTexture(block.leftfaceTexture);
-        Texture2D rightface = PrepareTexture(block.rightfaceTexture);
+        Texture2D backface = PrepareTexture(block.BackfaceTexture);
+        Texture2D frontface = PrepareTexture(block.FrontfaceTexture);
+        Texture2D topface = PrepareTexture(block.TopfaceTexture);
+        Texture2D bottomface = PrepareTexture(block.BottomfaceTexture);
+        Texture2D leftface = PrepareTexture(block.LeftfaceTexture);
+        Texture2D rightface = PrepareTexture(block.RightfaceTexture);
 
         GUILayout.Space(10);
         GUILayout.BeginHorizontal();

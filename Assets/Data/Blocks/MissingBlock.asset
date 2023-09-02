@@ -21,12 +21,12 @@ MonoBehaviour:
     Name: 
     Id: 8
     Buffs: []
-  blockType: 12
-  isSolid: 1
-  isTransparent: 1
-  backfaceTexture: 14
-  frontfaceTexture: 14
-  topfaceTexture: 14
-  bottomfaceTexture: 14
-  leftfaceTexture: 14
-  rightfaceTexture: 14
+  BlockType: 13
+  IsSolid: 1
+  IsTransparent: 0
+  BackfaceTexture: 14
+  FrontfaceTexture: 14
+  TopfaceTexture: 14
+  BottomfaceTexture: 14
+  LeftfaceTexture: 14
+  RightfaceTexture: 14

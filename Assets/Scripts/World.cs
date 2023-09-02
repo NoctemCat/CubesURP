@@ -319,8 +319,8 @@ public class World : MonoBehaviour
             Vector3Int checkCoord = PlayerChunk + coord;
             if (Chunks.ContainsKey(checkCoord)) continue;
 
-            string chunkName = GenerateChunkName(checkCoord);
-            if (File.Exists(PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName)))
+            string chunkName = PathHelper.GenerateChunkName(checkCoord);
+            if (CheckChunkFile(chunkName))
             {
                 SaveSystem.LoadChunkAsync(chunkName).ContinueWith(chunkData =>
                 {
@@ -347,6 +347,21 @@ public class World : MonoBehaviour
         JobHandle.ScheduleBatchedJobs();
 
         return allGenerated;
+    }
+    public bool CheckChunkFile(string chunkName)
+    {
+        string chunkFile = PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName);
+        if (File.Exists(chunkFile))
+        {
+            if (new FileInfo(chunkFile).Length > 0)
+                return true;
+            else
+            {
+                Debug.Log($"File {chunkFile} corrupted");
+                return false;
+            }
+        }
+        return false;
     }
 
     void ActivateNearChunks()
@@ -471,7 +486,7 @@ public class World : MonoBehaviour
             chunk.VoxelMapAccess.Complete();
 
             if (!chunk.IsActive) return false;
-            return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
+            return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].IsSolid;
         }
         return false;
     }
@@ -491,8 +506,7 @@ public class World : MonoBehaviour
 
     private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
 
-    public string GenerateChunkName(int3 chunkPos) => $"Chunk-{chunkPos.x},{chunkPos.y},{chunkPos.z}";
-    public string GenerateChunkName(Vector3Int chunkPos) => $"Chunk-{chunkPos.x},{chunkPos.y},{chunkPos.z}";
+
 }
 
 [Serializable]

@@ -147,11 +147,11 @@ static class MeshBuilder
             int threadOffset = ThreadIndex * JobsUtility.CacheLineSize;
             BlockStruct block = Blocks[(int)VoxelMap[i]];
 
-            if (block.isTransparent && block.isSolid)
+            if (block.IsTransparent && block.IsSolid)
             {
                 Counters[threadOffset + 1]++;
             }
-            if (block.isSolid)
+            if (block.IsSolid)
             {
                 Counters[threadOffset]++;
             }
@@ -245,7 +245,7 @@ static class MeshBuilder
                 BlockStruct current = Blocks[(int)VoxelMap[i]];
                 int3 pos = XYZMap[i];
 
-                if (!current.isSolid)
+                if (!current.IsSolid)
                 {
                     continue;
                 }
@@ -260,8 +260,8 @@ static class MeshBuilder
 
                     // These faces will be drawn
 
-                    if (!Blocks[(int)neighbour].isSolid || !current.isSolid
-                        || (current.isSolid && Blocks[(int)neighbour].isTransparent)
+                    if (!Blocks[(int)neighbour].IsSolid || !current.IsSolid
+                        || (current.IsSolid && Blocks[(int)neighbour].IsTransparent)
                     )
                     {
                         SolidFaces.AddNoResize(new(pos, f, current));
@@ -315,10 +315,10 @@ static class MeshBuilder
                         return false;
                 }
 
-                return Blocks[(int)voxelMap[CalcIndex(pos)]].isTransparent;
+                return Blocks[(int)voxelMap[CalcIndex(pos)]].IsTransparent;
             }
 
-            return Blocks[(int)VoxelMap[CalcIndex(pos)]].isTransparent;
+            return Blocks[(int)VoxelMap[CalcIndex(pos)]].IsTransparent;
         }
 
         Block GetNeighbour(int3 pos, VoxelFaces face)

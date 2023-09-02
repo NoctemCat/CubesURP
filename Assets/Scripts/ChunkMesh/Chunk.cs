@@ -134,7 +134,7 @@ public class Chunk
 
         _chunkObject.transform.SetParent(World.transform);
         _chunkObject.transform.position = WorldPos;
-        _chunkObject.name = World.GenerateChunkName(ChunkPos);
+        _chunkObject.name = PathHelper.GenerateChunkName(ChunkPos);
         ChunkName = _chunkObject.name;
 
         _chunkMesh = new Mesh()
@@ -156,6 +156,11 @@ public class Chunk
         IsActive = false;
         _isDisposed = true;
         VoxelMapAccess.Complete();
+        for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
+        {
+            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+                chunk.VoxelMapAccess.Complete();
+        }
         NeighbourModifications.Dispose();
         _modifications.Dispose();
         _structures.Dispose();

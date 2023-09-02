@@ -2839,7 +2839,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isGrounded: 0
   isSprinting: 0
-  ApplyGravity: 0
+  ApplyGravity: 1
   walkSpeed: 3
   sprintSpeed: 20
   jumpForce: 7
@@ -4073,7 +4073,6 @@ MonoBehaviour:
     type: 2}
   PlayerObj: {fileID: 671286977}
   PlayerChunk: {x: 0, y: 0, z: 0}
-  _refreshDistance: 0
 --- !u!4 &973370881
 Transform:
   m_ObjectHideFlags: 0

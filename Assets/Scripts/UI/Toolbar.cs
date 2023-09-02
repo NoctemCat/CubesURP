@@ -79,7 +79,7 @@ public class Toolbar : StaticInterface
         InventorySlot item = slotsOnInterface[Slots[slotIndex]];
 
         if (item.Amount > 0 && item.ItemObject is BlockObject blockObject)
-            player.selectedBlockIndex = (int)blockObject.blockType;
+            player.selectedBlockIndex = (int)blockObject.BlockType;
         else
             player.selectedBlockIndex = -1;
     }
