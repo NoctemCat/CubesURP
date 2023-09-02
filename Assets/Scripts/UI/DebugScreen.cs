@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -41,12 +42,17 @@ public class DebugScreen : MonoBehaviour
     {
         if (debugPanel.gameObject.activeSelf)
         {
-            string debug = "Debug Screen\n";
-            debug += frameRate + " fps\n";
             var pPos = World.PlayerObj.transform.position;
-            debug += $"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}\n";
-            debug += $"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}\n";
-            debugText.text = debug;
+
+            StringBuilder debug = new(256);
+            debug.AppendLine($"Debug Screen");
+            debug.AppendLine($"World Name: {World.WorldData.WorldName}");
+            debug.AppendLine($"World Seed: {World.WorldData.Seed}");
+            debug.AppendLine($"FPS: {frameRate}");
+            debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
+            debug.AppendLine($"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
+
+            debugText.text = debug.ToString();
         }
 
         if (timer > 1f)

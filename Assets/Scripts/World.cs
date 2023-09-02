@@ -25,7 +25,7 @@ public class World : MonoBehaviour
 
     [field: SerializeField] public BlockDictionary BlocksScObj { get; private set; }
     [SerializeField] private BiomeAttributes[] BiomeScObjs;
-    [SerializeField] private WorldData WorldData;
+    [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
     [field: SerializeField] public Material SolidMaterial { get; private set; }
     [field: SerializeField] public Material TransparentMaterial { get; private set; }
 
@@ -56,7 +56,7 @@ public class World : MonoBehaviour
         }
     }
 
-    public string AppPath { get; private set; }
+    public string WorldPath { get; private set; }
 
     private void Awake()
     {
@@ -65,7 +65,7 @@ public class World : MonoBehaviour
         else
             Destroy(Instance);
 
-        AppPath = Path.Combine(Application.persistentDataPath, WorldData.WorldName);
+        WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.WorldName);
 
         LoadSettings();
 
@@ -113,9 +113,10 @@ public class World : MonoBehaviour
 
     private void OnDestroy()
     {
-        foreach (var (cPos, chunk) in Chunks)
+        SaveSystem.DestroyForceSave();
+        foreach (var kvp in Chunks)
         {
-            chunk.Dispose();
+            kvp.Value.Dispose();
         }
         VoxelData.Dispose();
         Blocks.Dispose();
@@ -131,12 +132,6 @@ public class World : MonoBehaviour
 
     }
 
-    public void SaveSettings()
-    {
-        string saveSettings = JsonUtility.ToJson(Settings, true);
-        File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
-    }
-
     public void LoadSettings()
     {
         if (File.Exists($"{Application.dataPath}/settings.cfg"))
@@ -146,7 +141,11 @@ public class World : MonoBehaviour
         }
         else
         {
-            SaveSettings();
+            Settings settings = new();
+            settings.Init();
+            Settings = settings;
+            string saveSettings = JsonUtility.ToJson(settings, true);
+            File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
         }
     }
 
@@ -191,7 +190,7 @@ public class World : MonoBehaviour
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
 
-        SaveSystem.Update(Time.deltaTime);
+        SaveSystem.Update(Time.unscaledDeltaTime);
 
         for (int i = 0; i < ActiveChunks.Count; i++)
         {
@@ -264,8 +263,8 @@ public class World : MonoBehaviour
         }
         DisposedChunks.Clear();
 
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        //GC.Collect();
+        //GC.WaitForPendingFinalizers();
     }
 
     async UniTaskVoid CheckDistance()
@@ -319,12 +318,14 @@ public class World : MonoBehaviour
             if (!Chunks.ContainsKey(checkCoord))
             {
                 string chunkName = GenerateChunkName(checkCoord);
-                if (File.Exists(Path.Combine(SaveSystem.SaveChunkPath, chunkName)))
+                if (File.Exists(PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName)))
                 {
-                    SaveSystem.LoadChunk(chunkName).ContinueWith(chunkData =>
+                    SaveSystem.LoadChunkAsync(chunkName).ContinueWith(chunkData =>
                     {
                         var chunk = new Chunk(chunkData);
                         Chunks[checkCoord] = chunk;
+
+                        SaveSystem.ReclaimData(chunkData);
                     });
                 }
                 else

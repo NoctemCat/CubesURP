@@ -2766,6 +2766,7 @@ GameObject:
   m_Component:
   - component: {fileID: 973370881}
   - component: {fileID: 973370880}
+  - component: {fileID: 973370882}
   m_Layer: 0
   m_Name: World
   m_TagString: Untagged
@@ -2797,7 +2798,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
   - {fileID: 11400000, guid: 40ed8244d10033b4dbccba0319928fcd, type: 2}
   - {fileID: 11400000, guid: 7680dfad7b7273d458d36887ba91c434, type: 2}
-  WorldData: {fileID: 11400000, guid: 2f719428bdcc3de44a9fca93196af111, type: 2}
+  <WorldData>k__BackingField: {fileID: 11400000, guid: 2f719428bdcc3de44a9fca93196af111,
+    type: 2}
   <SolidMaterial>k__BackingField: {fileID: 2100000, guid: 6ca309128bc1fa5478151ca6626b17af,
     type: 2}
   <TransparentMaterial>k__BackingField: {fileID: 2100000, guid: 2a323fd0bc9c8294184dcb823e34da69,
@@ -2819,6 +2821,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &973370882
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 973370879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8d0fb1f041569140aa307807cdae251, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _pauseAction: {fileID: 1242248333842614841, guid: c9ee162633f9c5f42bc319d5e325f761,
+    type: 3}
 --- !u!1 &993543266
 GameObject:
   m_ObjectHideFlags: 0

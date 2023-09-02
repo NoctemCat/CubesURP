@@ -77,7 +77,8 @@ public class Chunk
 
         //chunkData.VoxelMap.
         VoxelMap.CopyFrom(chunkData.VoxelMap);
-        NeighbourModifications.CopyFromNBC(chunkData.NeighbourModifications);
+        NeighbourModifications.CopyFromNBC(chunkData.NeighbourModifications.ToArray());
+        //NeighbourModifications.AddRangeNoResize()
 
         _voxelMapGenerated = true;
         _dirtyMesh = true;
@@ -146,105 +147,23 @@ public class Chunk
         IsActive = true;
     }
 
-    //bool _safeDelete = false;
     ~Chunk()
     {
-        //if (_safeDelete)
-        //{
-        //    SaveDelete().Forget();
-        //}
-        //else
-        //{
-        //    Delete();
-        //}
-        //_requestingStop = true;
-
-        ////Delete().Forget();
-        //NeighbourModifications.Dispose();
-        //_modifications.Dispose();
-        //_structures.Dispose();
-        //_holder.Dispose();
-        //VoxelMap.Dispose();
     }
 
-    //public async UniTaskVoid SaveDelete()
-    //{
-    //    //if (!_safeDelete) return;
-
-    //    if (_modifications.Length > 0)
-    //        await ApplyMods();
-
-    //    NeighbourModifications.Dispose();
-    //    _modifications.Dispose();
-    //    _structures.Dispose();
-    //    _holder.Dispose();
-
-    //    //await SaveVoxelMap();
-    //    VoxelMap.Dispose();
-    //}
     public void Dispose()
     {
         IsActive = false;
         _isDisposed = true;
+        VoxelMapAccess.Complete();
         NeighbourModifications.Dispose();
         _modifications.Dispose();
         _structures.Dispose();
         _holder.Dispose();
         UnityEngine.Object.Destroy(_chunkMesh);
         UnityEngine.Object.Destroy(_chunkObject);
-        VoxelMapAccess = VoxelMap.Dispose(VoxelMapAccess);
+        VoxelMap.Dispose();
     }
-
-
-    //public async UniTask SaveVoxelMap()
-    //{
-    //    if (!_safeDelete) return;
-
-    //    Directory.CreateDirectory(Path.Combine(World.AppPath, "saves"));
-    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Create, FileAccess.Write);
-
-    //    Block[] arr = new Block[VoxelMap.Length];
-    //    await VoxelMapAccess;
-    //    VoxelMap.CopyTo(arr);
-    //    await MemoryPackSerializer.SerializeAsync(stream, arr);
-    //}
-
-    ////C:\Users\ya7ko\AppData\LocalLow\DefaultCompany\CubesURP\Prototype\saves
-    //public async UniTask LoadVoxelMap()
-    //{
-    //    if (!File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name))) return;
-
-    //    await UniTask.SwitchToMainThread();
-    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Open, FileAccess.Read);
-
-    //    int byteCount = sizeof(Block) * Data.ChunkSize;
-    //    byte[] bytes = new byte[byteCount];
-    //    await stream.ReadAsync(bytes, 0, byteCount);
-
-    //    NativeArray<Block> temp = VoxelMap;
-    //    var val = MemoryPackSerializer.Deserialize(bytes, ref temp);
-    //    VoxelMap = temp;
-    //}
-
-    //public async UniTask LoadVoxelMapNorm()
-    //{
-    //    if (!File.Exists(Path.Combine(World.AppPath, "saves", _chunkObject.name))) return;
-
-    //    using Stream stream = new FileStream(Path.Combine(World.AppPath, "saves", _chunkName), FileMode.Open, FileAccess.Read);
-
-    //    //int byteCount = sizeof(Block) * Data.ChunkSize;
-    //    //byte[] bytes = new byte[byteCount];
-    //    //stream.Read(bytes, 0, byteCount);
-    //    UnsafeAppendBuffer buffer;
-    //    //buffer.
-
-    //    //NativeArray<Block> temp = VoxelMap;
-    //    var arr = await MemoryPackSerializer.DeserializeAsync<Block[]>(stream);
-    //    await VoxelMapAccess;
-    //    VoxelMap.CopyFrom(arr);
-    //    //Debug.Log(temp.Length);
-    //    //VoxelMap = temp;
-    //}
 
     public void CheckNeighbours()
     {
@@ -325,6 +244,7 @@ public class Chunk
     {
         VoxelMapAccess = GenerateVoxelMap();
         await VoxelMapAccess;
+        if (_isDisposed) return;
 
         _structures.Clear();
 
@@ -397,8 +317,8 @@ public class Chunk
         VoxelMapAccess = _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
         await VoxelMapAccess;
-        if (_holder.IsEmpty) return true;
         if (_requestingStop) return false;
+        if (_holder.IsEmpty) return true;
         _holder.ResizeFacesData();
 
         VoxelMapAccess = _holder.SortVoxels(VoxelMapAccess, VoxelMap);

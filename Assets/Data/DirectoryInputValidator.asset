@@ -9,8 +9,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4eb49751643dfe846b13d5680f84005b, type: 3}
-  m_Name: WorldData
+  m_Script: {fileID: 11500000, guid: 2b70ac79e473ffd4e8ae4d87a6af7961, type: 3}
+  m_Name: DirectoryInputValidator
   m_EditorClassIdentifier: 
-  Seed: fdsfds
-  WorldName: Prototype

@@ -7,40 +7,32 @@ using UnityEngine.UI;
 
 public class TitleMenu : MonoBehaviour
 {
-    [SerializeField] private GameObject Title;
-    [SerializeField] private GameObject Settings;
+    [SerializeField] private GameObject _titlePanel;
+    [SerializeField] private GameObject _selectWorldPanel;
+    [SerializeField] private GameObject _settingsPanel;
 
-    [SerializeField] private Button StartButton;
-    [SerializeField] private Button EnterSettingsButton;
-    [SerializeField] private Button LeaveSettingsButton;
-    [SerializeField] private Button QuitButton;
-
-    [SerializeField] private WorldData WorldData;
-    [SerializeField] private TMP_InputField SeedField;
+    [SerializeField] private Button _enterSelectWorldPanel;
+    [SerializeField] private Button _enterSettingsButton;
+    [SerializeField] private Button _quitButton;
 
     private void Awake()
     {
-        StartButton.onClick.AddListener(StartGame);
-        EnterSettingsButton.onClick.AddListener(EnterSettings);
-        LeaveSettingsButton.onClick.AddListener(LeaveSettings);
-        QuitButton.onClick.AddListener(QuitGame);
+        _enterSelectWorldPanel.onClick.AddListener(EnterSelectWorld);
+        _enterSettingsButton.onClick.AddListener(EnterSettings);
+        _quitButton.onClick.AddListener(QuitGame);
     }
 
-    public void StartGame()
+    public void EnterSelectWorld()
     {
-        WorldData.Seed = SeedField.text;
-        SceneManager.LoadScene("Main", LoadSceneMode.Single);
+        _titlePanel.SetActive(false);
+        _selectWorldPanel.SetActive(true);
     }
     public void EnterSettings()
     {
-        Title.SetActive(false);
-        Settings.SetActive(true);
+        _titlePanel.SetActive(false);
+        _settingsPanel.SetActive(true);
     }
-    public void LeaveSettings()
-    {
-        Title.SetActive(true);
-        Settings.SetActive(false);
-    }
+
     public void QuitGame()
     {
         Application.Quit();
