@@ -10,12 +10,14 @@ using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
+    private Transform _lookFrom;
+    private World World;
+    private PlayerInventory _inventory;
+
     public bool isGrounded;
     public bool isSprinting;
     public bool ApplyGravity = true;
 
-    private Transform _lookFrom;
-    private World World;
 
     Vector2 mouse = new(0f, 0f);
     Vector2 movement = new(0f, 0f);
@@ -73,28 +75,35 @@ public class Player : MonoBehaviour
 
     private void OnDestroyBlock(InputValue value)
     {
-        if (World != null && highlightBlock.gameObject.activeSelf && value.isPressed)
-        {
-            //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
-            BlockObject blockObjetc = World.GetVoxel(highlightBlock.position);
-            if (blockObjetc.blockType != Block.Air)
-            {
-                World.PlaceBlock(highlightBlock.position, 0);
+        if (
+            Time.timeScale == 0 ||
+            World == null ||
+            !highlightBlock.gameObject.activeSelf ||
+            !value.isPressed
+        ) return;
 
-                var inventory = GetComponent<PlayerInventory>();
-                inventory.AddItem(new Item(blockObjetc), 1);
-            }
+        //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
+        BlockObject blockObjetc = World.GetVoxel(highlightBlock.position);
+        if (blockObjetc.blockType != Block.Air)
+        {
+            World.PlaceBlock(highlightBlock.position, 0);
+
+            var inventory = GetComponent<PlayerInventory>();
+            inventory.AddItem(new Item(blockObjetc), 1);
         }
     }
 
     private void OnPlaceBlock(InputValue value)
     {
-        if (selectedBlockIndex < 0) return;
+        if (Time.timeScale == 0 || selectedBlockIndex < 0) return;
 
         BlockObject blockObjet = World.GetVoxel(placeBlock.position);
-        if (blockObjet.blockType != Block.Air) return;
 
-        if (!placeBlock.gameObject.activeSelf || !value.isPressed) return;
+        if (
+            blockObjet.blockType != Block.Air ||
+            !placeBlock.gameObject.activeSelf ||
+            !value.isPressed
+        ) return;
 
         int xSelf = Mathf.FloorToInt(transform.position.x);
         int ySelf = Mathf.FloorToInt(transform.position.y);
@@ -126,34 +135,32 @@ public class Player : MonoBehaviour
         isSprinting = value.isPressed;
     }
 
-    private void OnOpenInventory(InputValue value)
-    {
-        World.InUI = !World.InUI;
-        if (World.InUI)
-        {
-            Cursor.lockState = CursorLockMode.None;
-        }
-        else
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-        }
-    }
-
 #pragma warning restore IDE0051
 
-    async UniTaskVoid Start()
+    private void Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
-        _lookFrom = transform.Find("LookFrom");
+        _lookFrom = transform.GetChild(1);
 
         World = World.Instance;
+        _inventory = GetComponent<PlayerInventory>();
 
         Cursor.lockState = CursorLockMode.Locked;
 
         gameObject.SetActive(false);
 
+        Activate().Forget();
+    }
+
+    private async UniTaskVoid Activate()
+    {
         await UniTask.WaitForSeconds(0.5f);
         gameObject.SetActive(true);
+    }
+
+    private void OnDestroy()
+    {
+        Debug.Log("Player desroyed");
     }
 
     private void FixedUpdate()
@@ -164,14 +171,10 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-
-        if (!World.InUI)
+        if (!_inventory.InInventory)
         {
-
             PlaceCursorBlock();
 
-            //float rotationY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-            //float rotationX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
             float rotationY = mouse.y * World.Settings.MouseSenstivity * Time.deltaTime;
             float rotationX = mouse.x * World.Settings.MouseSenstivity * Time.deltaTime;
             if (rotationY > 0)
@@ -182,10 +185,12 @@ public class Player : MonoBehaviour
             transform.localEulerAngles = new(0f, angles.y, 0f);
             _lookFrom.localEulerAngles = new(angles.x, 0f, 0f);
         }
-
-
+        else
+        {
+            highlightBlock.gameObject.SetActive(false);
+            placeBlock.gameObject.SetActive(false);
+        }
         //frustumPlanes[0].GetSide
-
     }
 
     private void CalculateVelocity()
@@ -222,6 +227,9 @@ public class Player : MonoBehaviour
         Vector3 lastPos = new();
 
         World.GetAccessForPlayer();
+
+
+
         for (float step = checkIncrement; step < reach; step += checkIncrement)
         {
             Vector3 pos = _lookFrom.position + (_lookFrom.forward * step);

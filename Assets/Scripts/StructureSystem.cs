@@ -1,6 +1,7 @@
 
 
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
 using Unity.Collections;
@@ -10,23 +11,23 @@ using UnityEngine;
 
 using static CubesUtils;
 
-public class StructureBuilder
+public class StructureSystem : MonoBehaviour
 {
-    private readonly World World;
+    private World World;
     private NativeList<VoxelMod> _structures;
-    private readonly Dictionary<Vector3Int, List<VoxelMod>> _sortedStructures;
+    private Dictionary<Vector3Int, List<VoxelMod>> _sortedStructures;
+    private float _timer;
 
-    public StructureBuilder(World world)
+    private void Awake()
     {
-        World = world;
+        World = World.Instance;
         //_chunks = chunks;
         _structures = new NativeList<VoxelMod>(10000, Allocator.Persistent);
         _sortedStructures = new(100);
-
-        CheckStructures().Forget();
+        _timer = 0f;
     }
 
-    ~StructureBuilder()
+    private void OnDestroy()
     {
         _structures.Dispose();
     }
@@ -36,12 +37,14 @@ public class StructureBuilder
         _structures.AddRange(structures.AsArray());
     }
 
-    private async UniTaskVoid CheckStructures()
+    private void Update()
     {
-        while (true)
+        _timer += Time.deltaTime;
+
+        if (_timer > 1f)
         {
-            await UniTask.WaitForSeconds(1);
             SortStructures();
+            _timer = 0f;
         }
     }
 

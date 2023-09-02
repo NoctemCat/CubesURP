@@ -1,12 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerInventory : MonoBehaviour
 {
+    private World World;
     public InventoryObject ToolbarObj;
     public InventoryObject InventoryObj;
     public InventoryObject EquipmentObj;
+
+    [SerializeField] private GameObject _inventoryScreen;
 
     //private void Update()
     //{
@@ -24,6 +28,43 @@ public class PlayerInventory : MonoBehaviour
     //        EquipmentObj.Load();
     //    }
     //}
+    public bool InInventory { get; private set; }
+
+    private void Start()
+    {
+        World = World.Instance;
+        InInventory = false;
+
+        World.OnResume += SetCursorState;
+    }
+
+    private void OnOpenInventory(InputValue value)
+    {
+        if (Time.timeScale == 0) return;
+
+        InInventory = !InInventory;
+
+        _inventoryScreen.SetActive(InInventory);
+        if (!InInventory)
+        {
+            TooltipScreenSpaceUI.HideTooltip_Static();
+        }
+        SetCursorState();
+    }
+
+    public void SetCursorState()
+    {
+        if (InInventory)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+    }
 
     public void OnTriggerEnter(Collider other)
     {

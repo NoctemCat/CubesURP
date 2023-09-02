@@ -14,8 +14,11 @@ public abstract class UserInterface : MonoBehaviour
 
     protected Dictionary<GameObject, InventorySlot> slotsOnInterface = new();
 
+    private Transform _canvasTransform;
+
     public virtual void Start()
     {
+        _canvasTransform = transform.root.GetComponent<Canvas>().transform;
         for (int i = 0; i < Inventory.GetSlots.Length; i++)
         {
             Inventory.GetSlots[i].Parent = this;
@@ -143,7 +146,7 @@ public abstract class UserInterface : MonoBehaviour
             tempItem = new GameObject();
             var rt = tempItem.AddComponent<RectTransform>();
             rt.sizeDelta = new(36, 36);
-            tempItem.transform.SetParent(transform.parent.parent);
+            tempItem.transform.SetParent(_canvasTransform);
 
             var img = tempItem.AddComponent<Image>();
             img.sprite = slotsOnInterface[obj].ItemObject.UIDisplay;

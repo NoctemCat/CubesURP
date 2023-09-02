@@ -24,12 +24,13 @@ public class InventoryObject : ScriptableObject
 
     public bool AddItem(Item item, int amount)
     {
-        if (EmptySlotCount <= 0)
-            return false;
-
+        //if
         InventorySlot slot = FindItemOnInventory(item);
         if (!Database.ItemObjects[item.Id].Stackable || slot == null)
         {
+            if (EmptySlotCount <= 0)
+                return false;
+
             SetEmptySlot(item, amount);
             return true;
         }
@@ -85,7 +86,7 @@ public class InventoryObject : ScriptableObject
                 return GetSlots[i];
             }
         }
-        // TODO Set up when inventory is full
+        // TODO Do something when inventory is full
         return null;
     }
 

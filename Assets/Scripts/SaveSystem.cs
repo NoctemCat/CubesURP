@@ -2,59 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using MemoryPack;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class ChunkDataPool
+public class SaveSystem : MonoBehaviour
 {
-    private readonly World World;
-    private List<ChunkData> _datas;
-
-    public ChunkDataPool(World world)
-    {
-        World = world;
-        _datas = new List<ChunkData>(5);
-    }
-
-    public void AddToPool(int add = 5)
-    {
-        _datas.Capacity += add;
-        for (int i = 0; i < add; i++)
-        {
-            ChunkData data = new()
-            {
-                x = 0,
-                y = 0,
-                z = 0,
-                VoxelMap = new Block[World.VoxelData.ChunkSize],
-                NeighbourModifications = new()
-            };
-            _datas.Add(data);
-        }
-    }
-
-    public ChunkData Get()
-    {
-        if (_datas.Count <= 1)
-            AddToPool();
-
-        ChunkData data = _datas[^1];
-        _datas.RemoveAt(_datas.Count - 1);
-        return data;
-    }
-
-    public void Reclaim(ChunkData data)
-    {
-        _datas.Add(data);
-    }
-}
-
-public class SaveSystem
-{
-    private readonly World World;
-    private readonly ChunkDataPool _pool;
+    private World World;
+    private ChunkDataPool _pool;
 
     public List<Chunk> ChunksToSave { get; private set; }
     public string SaveChunkPath { get; private set; }
@@ -62,9 +19,9 @@ public class SaveSystem
     private float _time;
     private bool _forceSave;
 
-    public SaveSystem(World world)
+    private void Awake()
     {
-        World = world;
+        World = World.Instance;
         _pool = new(World);
 
         SaveChunkPath = Path.Combine(World.WorldPath, "chunks");
@@ -72,8 +29,11 @@ public class SaveSystem
 
         _time = 0f;
         _forceSave = false;
+    }
 
-        WatchUpdate().Forget();
+    private void Start()
+    {
+        WatchUpdate(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     public void AddChunkToSave(Chunk chunk)
@@ -82,9 +42,9 @@ public class SaveSystem
             ChunksToSave.Add(chunk);
     }
 
-    public void Update(float deltaTime)
+    public void Update()
     {
-        _time += deltaTime;
+        _time += Time.unscaledDeltaTime;
     }
 
     public void ForceSave()
@@ -92,17 +52,16 @@ public class SaveSystem
         _forceSave = true;
     }
 
-
-
-
-    private async UniTask WatchUpdate()
+    private async UniTask WatchUpdate(CancellationToken token)
     {
         List<UniTask> tasks = new(10);
         List<Chunk> copy = new(10);
         await UniTask.SwitchToThreadPool();
         while (true)
         {
-            await UniTask.WaitUntil(() => { return _time > 4f || _forceSave; });
+            await UniTask.WaitUntil(() => { return _time > 4f || _forceSave; }, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
+            if (token.IsCancellationRequested) return;
+
             _forceSave = false;
 
             for (int i = 0; i < ChunksToSave.Count; i++)
@@ -155,13 +114,13 @@ public class SaveSystem
     /// <returns>UniTask with chunk data</returns>
     public async UniTask<ChunkData> LoadChunkAsync(string chunkName)
     {
+        ChunkData chunkData = _pool.Get();
         await UniTask.SwitchToThreadPool();
 
         using Stream stream = new FileStream(PathHelper.GetChunkPath(SaveChunkPath, chunkName), FileMode.Open, FileAccess.Read);
         using MemoryStream ms = new();
 
         await stream.CopyToAsync(ms);
-        ChunkData chunkData = _pool.Get();
 
         MemoryPackSerializer.Deserialize(ms.ToArray(), ref chunkData);
 
@@ -187,13 +146,14 @@ public class SaveSystem
     {
         Directory.CreateDirectory(SaveChunkPath);
 
-        ChunkData chunkData = _pool.Get();
-
-        chunkData.x = chunk.ChunkPos.x;
-        chunkData.y = chunk.ChunkPos.y;
-        chunkData.z = chunk.ChunkPos.z;
-        chunkData.NeighbourModifications.Clear();
-        chunkData.NeighbourModifications.Capacity = chunk.NeighbourModifications.Length;
+        ChunkData chunkData = new()
+        {
+            x = chunk.ChunkPos.x,
+            y = chunk.ChunkPos.y,
+            z = chunk.ChunkPos.z,
+            VoxelMap = new Block[World.VoxelData.ChunkSize],
+            NeighbourModifications = new(chunk.NeighbourModifications.Length)
+        };
 
         chunk.VoxelMap.CopyTo(chunkData.VoxelMap);
         foreach (var mod in chunk.NeighbourModifications)
@@ -221,6 +181,49 @@ public partial class ChunkData
     public Vector3Int ChunkPos => new(x, y, z);
 }
 
+public class ChunkDataPool
+{
+    private readonly World World;
+    private List<ChunkData> _datas;
+
+    public ChunkDataPool(World world)
+    {
+        World = world;
+        _datas = new List<ChunkData>(5);
+    }
+
+    public void AddToPool(int add = 5)
+    {
+        _datas.Capacity += add;
+        for (int i = 0; i < add; i++)
+        {
+            ChunkData data = new()
+            {
+                x = 0,
+                y = 0,
+                z = 0,
+                VoxelMap = new Block[World.VoxelData.ChunkSize],
+                NeighbourModifications = new()
+            };
+            _datas.Add(data);
+        }
+    }
+
+    public ChunkData Get()
+    {
+        if (_datas.Count <= 1)
+            AddToPool();
+
+        ChunkData data = _datas[^1];
+        _datas.RemoveAt(_datas.Count - 1);
+        return data;
+    }
+
+    public void Reclaim(ChunkData data)
+    {
+        _datas.Add(data);
+    }
+}
 
 public static class ListExtras
 {

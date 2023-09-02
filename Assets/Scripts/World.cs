@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+
 //using System.Linq;
 using Cysharp.Threading.Tasks;
 using Unity.Burst;
@@ -36,7 +38,7 @@ public class World : MonoBehaviour
     public Dictionary<Vector3Int, Chunk> Chunks { get; private set; }
     public NativeArray<Block> DummyMap { get; private set; }
 
-    public StructureBuilder StructureBuilder { get; private set; }
+    public StructureSystem StructureSystem { get; private set; }
     public SaveSystem SaveSystem { get; private set; }
 
     List<Vector3Int> ViewCoords;
@@ -45,18 +47,11 @@ public class World : MonoBehaviour
     List<Chunk> DisposedChunks;
 
     public Vector3Int PlayerChunk;
-
-    private bool _inUI;
-    public bool InUI
-    {
-        get { return _inUI; }
-        set
-        {
-            _inUI = value;
-        }
-    }
+    private bool _refreshDistance;
 
     public string WorldPath { get; private set; }
+    public Action OnPause;
+    public Action OnResume;
 
     private void Awake()
     {
@@ -68,6 +63,9 @@ public class World : MonoBehaviour
         WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.WorldName);
 
         LoadSettings();
+        OnResume += LoadSettings;
+
+        _refreshDistance = false;
 
         Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.Seed.GetHashCode(), 0)));
         RandomXYZ = rng.NextFloat3() * 10000;
@@ -84,7 +82,6 @@ public class World : MonoBehaviour
         Biomes = biomesTemp;
 
         //Debug.Log(Settings.ViewDistance);
-        ViewCoords = WorldHelper.InitViewCoords(Settings.ViewDistance);
 
         Chunks = new(ViewCoords.Count);
         //ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
@@ -98,18 +95,21 @@ public class World : MonoBehaviour
         //LastPlayerChunk = new(-1000, -1000, -1000);
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
 
-        StructureBuilder = new(this);
-        SaveSystem = new(this);
-        //GenerateWorld();
-        //EmptyJob dummy = new() { };
-        //GeneratingStructures = dummy.Schedule();
-
-        CheckDistance().Forget();
-        CheckDisposeChunks().Forget();
-        //LastPlayerChunk = PlayerChunk;
-        //GenerateVoxelMaps();
-        //CheckStructures().Forget();
+        StructureSystem = GetComponent<StructureSystem>();
+        SaveSystem = GetComponent<SaveSystem>();
     }
+
+    private void Start()
+    {
+        CheckDistance(this.GetCancellationTokenOnDestroy()).Forget();
+        CheckDisposeChunks(this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    //private async UniTaskVoid Test(CancellationToken cancellationToken)
+    //{
+    //    //cancellationToken.IsCancellationRequested
+    //    //CheckDistance()
+    //}
 
     private void OnDestroy()
     {
@@ -130,6 +130,7 @@ public class World : MonoBehaviour
 
         DummyMap.Dispose();
 
+        Destroy(Instance);
     }
 
     public void LoadSettings()
@@ -138,6 +139,8 @@ public class World : MonoBehaviour
         {
             string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
             Settings = JsonUtility.FromJson<Settings>(loadSettings);
+            ViewCoords = WorldHelper.InitViewCoords(Settings.ViewDistance);
+            _refreshDistance = true;
         }
         else
         {
@@ -190,8 +193,6 @@ public class World : MonoBehaviour
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
 
-        SaveSystem.Update(Time.unscaledDeltaTime);
-
         for (int i = 0; i < ActiveChunks.Count; i++)
         {
             ActiveChunks[i].Update();
@@ -218,7 +219,7 @@ public class World : MonoBehaviour
     //    return false;
     //}
 
-    async UniTaskVoid CheckDisposeChunks()
+    async UniTaskVoid CheckDisposeChunks(CancellationToken token)
     {
         List<Vector3Int> toRemove = new();
         while (true)
@@ -239,7 +240,6 @@ public class World : MonoBehaviour
                     int i = ActiveChunks.IndexOf(kvp.Value);
                     if (i != -1)
                         ActiveChunks.RemoveAt(i);
-
                 }
             }
             for (int i = 0; i < toRemove.Count; i++)
@@ -248,7 +248,8 @@ public class World : MonoBehaviour
             }
             toRemove.Clear();
 
-            await UniTask.WaitForSeconds(6f);
+            await UniTask.WaitForSeconds(6f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+            if (token.IsCancellationRequested) return;
 
             DisposeChunks().Forget();
         }
@@ -267,7 +268,7 @@ public class World : MonoBehaviour
         //GC.WaitForPendingFinalizers();
     }
 
-    async UniTaskVoid CheckDistance()
+    async UniTask CheckDistance(CancellationToken token)
     {
         Vector3Int LastPlayerChunk;
 
@@ -280,11 +281,13 @@ public class World : MonoBehaviour
             )
             {
                 LastPlayerChunk = PlayerChunk;
-                await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating);
+                await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+                if (token.IsCancellationRequested) return;
             }
 
-            //Debug.Log("Finished generating available");
-            await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk);
+            await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk || _refreshDistance, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
+            if (token.IsCancellationRequested) return;
+            _refreshDistance = false;
         }
     }
 
@@ -314,32 +317,30 @@ public class World : MonoBehaviour
         foreach (var coord in ViewCoords)
         {
             Vector3Int checkCoord = PlayerChunk + coord;
+            if (Chunks.ContainsKey(checkCoord)) continue;
 
-            if (!Chunks.ContainsKey(checkCoord))
+            string chunkName = GenerateChunkName(checkCoord);
+            if (File.Exists(PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName)))
             {
-                string chunkName = GenerateChunkName(checkCoord);
-                if (File.Exists(PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName)))
+                SaveSystem.LoadChunkAsync(chunkName).ContinueWith(chunkData =>
                 {
-                    SaveSystem.LoadChunkAsync(chunkName).ContinueWith(chunkData =>
-                    {
-                        var chunk = new Chunk(chunkData);
-                        Chunks[checkCoord] = chunk;
-
-                        SaveSystem.ReclaimData(chunkData);
-                    });
-                }
-                else
-                {
-                    var chunk = new Chunk(checkCoord);
+                    var chunk = new Chunk(chunkData);
                     Chunks[checkCoord] = chunk;
-                }
 
-                toGenerate--;
-                if (toGenerate <= 0)
-                {
-                    allGenerated = false;
-                    break;
-                }
+                    SaveSystem.ReclaimData(chunkData);
+                });
+            }
+            else
+            {
+                var chunk = new Chunk(checkCoord);
+                Chunks[checkCoord] = chunk;
+            }
+
+            toGenerate--;
+            if (toGenerate <= 0)
+            {
+                allGenerated = false;
+                break;
             }
         }
         ActivateNearChunks();

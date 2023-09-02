@@ -5,16 +5,15 @@ using UnityEngine.EventSystems;
 public class DynamicInterface : UserInterface
 {
     public GameObject SlotPrefab;
-    Transform _content;
+    public Transform Content;
 
     public override void CreateSlots()
     {
         slotsOnInterface = new();
-        _content = transform.Find("Viewport/InventoryContent");
 
         for (int i = 0; i < Inventory.GetSlots.Length; i++)
         {
-            GameObject obj = Instantiate(SlotPrefab, _content);
+            GameObject obj = Instantiate(SlotPrefab, Content);
             //UIInventorySlot uiSlot = obj.GetComponent<UIInventorySlot>();
             Inventory.GetSlots[i].SlotDisplay = obj;
             slotsOnInterface[obj] = Inventory.GetSlots[i];

@@ -182,7 +182,7 @@ public class Chunk
 
         if (NeighbourModifications.Length > 0)
         {
-            World.StructureBuilder.AddStructures(NeighbourModifications);
+            World.StructureSystem.AddStructures(NeighbourModifications);
         }
     }
 
