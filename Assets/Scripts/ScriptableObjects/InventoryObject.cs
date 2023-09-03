@@ -12,15 +12,15 @@ using System.Runtime.Serialization;
 public class InventoryObject : ScriptableObject
 {
     [field: SerializeField] public string SavePath { get; private set; }
-    public ItemDatabaseObject Database;
     //public int Capacity;
     public Inventory Container;
-    public InventorySlot[] GetSlots { get { return Container.Slots; } }
+    private ItemDatabaseObject Database => ItemDatabaseObject.Instance;
+    public InventorySlot[] GetSlots => Container.Slots;
 
-    private void OnEnable()
-    {
-        Database = Resources.Load<ItemDatabaseObject>("Data/Database");
-    }
+    //private void OnEnable()
+    //{
+    //    Database = ;
+    //}
 
     public bool AddItem(Item item, int amount)
     {
@@ -90,7 +90,7 @@ public class InventoryObject : ScriptableObject
         return null;
     }
 
-    public void SwapItems(InventorySlot item1, InventorySlot item2)
+    public static void SwapItems(InventorySlot item1, InventorySlot item2)
     {
         if (item2.CanPlaceInSlot(item1.ItemObject) && item1.CanPlaceInSlot(item2.ItemObject))
         {
@@ -107,13 +107,13 @@ public class InventoryObject : ScriptableObject
     /// </summary>
     /// <param name="item1"></param>
     /// <param name="item2"></param>
-    public void MergeItems(InventorySlot item1, InventorySlot item2)
+    public static void MergeItems(InventorySlot item1, InventorySlot item2)
     {
         item2.AddAmount(item1.Amount);
         item1.RemoveItem();
     }
 
-    public void RemoveItem(InventorySlot item)
+    public static void RemoveItem(InventorySlot item)
     {
         item.RemoveItem();
     }
@@ -199,8 +199,6 @@ public class InventorySlot
 {
     public ItemType[] AllowedItems = new ItemType[0];
     [NonSerialized]
-    public UserInterface Parent;
-    [NonSerialized]
     public GameObject SlotDisplay;
     [NonSerialized]
     public SlotUpdated OnAfterUpdate;
@@ -209,18 +207,8 @@ public class InventorySlot
     public Item Item;
     public int Amount;
 
-    public ItemObject ItemObject
-    {
-        get
-        {
-            if (Item.Id >= 0)
-            {
-                return Parent.Inventory.Database.ItemObjects[Item.Id];
-            }
-            else
-                return null;
-        }
-    }
+    public ItemObject ItemObject => Item.Id >= 0 ? ItemDatabaseObject.Instance.ItemObjects[Item.Id] : null;
+
     public InventorySlot() => UpdateSlot(new(), 0);
     public InventorySlot(Item item, int amount) => UpdateSlot(item, amount);
     public void UpdateSlot(InventorySlot other) => UpdateSlot(other.Item, other.Amount);

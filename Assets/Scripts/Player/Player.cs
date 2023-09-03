@@ -11,7 +11,7 @@ using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
-    private Transform _lookFrom;
+    public Transform LookFrom { get; private set; }
     private World World;
     private PlayerInventory _inventory;
 
@@ -34,7 +34,8 @@ public class Player : MonoBehaviour
     public float playerWidth = 0.3f;
 
 
-    private Vector3 velocity;
+    private Vector3 _velocity;
+    public Vector3 Velocity => _velocity;
     private float verticalMomentum = 0f;
 
     private float PX => transform.position.x;
@@ -53,11 +54,9 @@ public class Player : MonoBehaviour
 
     public Transform highlightBlock;
     public Transform placeBlock;
-    public float checkIncrement = 0.75f;
     public float reach = 8f;
 
     public int selectedBlockIndex;
-
     public bool isJumping;
 
 #pragma warning disable IDE0051
@@ -84,13 +83,16 @@ public class Player : MonoBehaviour
         ) return;
 
         //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
-        BlockObject blockObjetc = World.GetVoxel(highlightBlock.position);
-        if (blockObjetc.BlockType != Block.Air)
+        BlockObject blockObject = World.GetVoxel(highlightBlock.position);
+        if (blockObject.BlockType != Block.Air)
         {
             World.PlaceBlock(highlightBlock.position, 0);
 
-            var inventory = GetComponent<PlayerInventory>();
-            inventory.AddItem(new Item(blockObjetc), 1);
+            GroundItemsPool.DropItems(
+                highlightBlock.position + new Vector3(0.5f, 0.5f, 0.5f),
+                new(UnityEngine.Random.value * 0.05f, UnityEngine.Random.value * 0.1f, UnityEngine.Random.value * 0.05f),
+                blockObject, 1
+            );
         }
     }
 
@@ -116,11 +118,10 @@ public class Player : MonoBehaviour
 
         if (xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock) return;
 
-        var inventory = GetComponent<PlayerInventory>();
         Block selBlock = (Block)selectedBlockIndex;
         BlockObject selObj = World.BlocksScObj.Blocks[selBlock];
 
-        if (inventory.RemoveItem(new Item(selObj), 1))
+        if (_inventory.RemoveItem(new Item(selObj), 1))
         {
             World.PlaceBlock(placeBlock.position, selBlock);
         }
@@ -141,7 +142,7 @@ public class Player : MonoBehaviour
     private async UniTaskVoid Start()
     {
         //camera = GameObject.Find("Main Camera").transform;
-        _lookFrom = transform.GetChild(1);
+        LookFrom = transform.GetChild(1);
 
         World = World.Instance;
         _inventory = GetComponent<PlayerInventory>();
@@ -166,7 +167,7 @@ public class Player : MonoBehaviour
     private void FixedUpdate()
     {
         CalculateVelocity();
-        transform.Translate(velocity, Space.World);
+        transform.Translate(_velocity, Space.World);
     }
 
     private void Update()
@@ -183,7 +184,7 @@ public class Player : MonoBehaviour
                 angles = new Vector3(Mathf.MoveTowards(angles.x, 90, -rotationY), angles.y + rotationX, 0);
 
             transform.localEulerAngles = new(0f, angles.y, 0f);
-            _lookFrom.localEulerAngles = new(angles.x, 0f, 0f);
+            LookFrom.localEulerAngles = new(angles.x, 0f, 0f);
         }
         else
         {
@@ -205,20 +206,20 @@ public class Player : MonoBehaviour
             verticalMomentum += Time.fixedDeltaTime * gravity;
 
         float moveSpeed = (!isSprinting) ? walkSpeed : sprintSpeed;
-        velocity = moveSpeed * Time.fixedDeltaTime * ((transform.forward * movement.y) + (transform.right * movement.x));
+        _velocity = moveSpeed * Time.fixedDeltaTime * ((transform.forward * movement.y) + (transform.right * movement.x));
 
-        velocity += Time.fixedDeltaTime * verticalMomentum * Vector3.up;
+        _velocity += Time.fixedDeltaTime * verticalMomentum * Vector3.up;
 
-        if ((velocity.z > 0f && Front) || (velocity.z < 0f && Back))
-            velocity.z = 0f;
-        if ((velocity.x > 0f && Right) || (velocity.x < 0f && Left))
-            velocity.x = 0f;
+        if ((_velocity.z > 0f && Front) || (_velocity.z < 0f && Back))
+            _velocity.z = 0f;
+        if ((_velocity.x > 0f && Right) || (_velocity.x < 0f && Left))
+            _velocity.x = 0f;
 
-        World.GetAccessForPlayer();
-        if (velocity.y < 0f)
-            velocity.y = CheckDownSpeed(velocity.y);
-        else if (velocity.y > 0f)
-            velocity.y = CheckUpSpeed(velocity.y);
+        //World.GetAccessForPlayer();
+        if (_velocity.y < 0f)
+            _velocity.y = CheckDownSpeed(_velocity.y);
+        else if (_velocity.y > 0f)
+            _velocity.y = CheckUpSpeed(_velocity.y);
 
     }
 
@@ -227,7 +228,7 @@ public class Player : MonoBehaviour
         bool disable = true;
         var cast = new VoxelRaycast(null);
 
-        cast.Raycast(_lookFrom.position, _lookFrom.forward, reach, (Vector3Int block, Vector3Int faceNormal) =>
+        cast.Raycast(LookFrom.position, LookFrom.forward, reach, (Vector3Int block, Vector3Int faceNormal) =>
         {
             bool isSolid = World.CheckForVoxel(block);
 
@@ -288,5 +289,31 @@ public class Player : MonoBehaviour
         }
     }
 
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.TryGetComponent(out GroundItem item) && Time.time - item.CreateTime > 0.5f)
+        {
+            //Debug.Log($"{Time.time}, {item.CreateTime}");
+            _inventory.AddItem(item.ItemObj.Data, item.Amount);
+            other.gameObject.SetActive(false);
+            return;
+        }
+
+        //if (other.TryGetComponent(out BlockPhysics physics))
+        //{
+        //    Vector3 dir = (physics.transform.position - transform.position).normalized;
+        //    physics.AddVelocity(dir * Time.deltaTime);
+        //}
+    }
+
+    public void OnTriggerEnter(Collider other)
+    {
+        //Debug.Log(other.name);
+    }
+
+    public Vector3 GetDropItemVelocity()
+    {
+        return LookFrom.forward * .25f + _velocity * 2f;
+    }
 
 }

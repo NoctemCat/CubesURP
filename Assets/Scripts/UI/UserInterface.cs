@@ -11,17 +11,17 @@ using UnityEngine.InputSystem;
 public abstract class UserInterface : MonoBehaviour
 {
     public InventoryObject Inventory;
+    public MouseDragData mouseDragData;
 
     protected Dictionary<GameObject, InventorySlot> slotsOnInterface = new();
 
-    private Transform _canvasTransform;
+    //private Transform _canvasTransform;
 
     public virtual void Start()
     {
-        _canvasTransform = transform.root.GetComponent<Canvas>().transform;
+        //_canvasTransform = transform.root.GetComponent<Canvas>().transform;
         for (int i = 0; i < Inventory.GetSlots.Length; i++)
         {
-            Inventory.GetSlots[i].Parent = this;
             Inventory.GetSlots[i].OnAfterUpdate += OnSlotUpdate;
             Inventory.GetSlots[i].OnBeforeUpdate += OnBeforeUpdate;
         }
@@ -37,10 +37,7 @@ public abstract class UserInterface : MonoBehaviour
         if (slot.Item.Id < 0)
             uiSlot.Disable();
         else
-        {
-            Sprite icon = slot.ItemObject.UIDisplay;
-            uiSlot.Set(icon, slot.Amount.ToString("n0"), slot.Item.Name);
-        }
+            uiSlot.Set(slot.ItemObject.UIDisplay, slot.Amount.ToString("n0"), slot.Item.Name);
     }
 
     private void OnBeforeUpdate(InventorySlot slot)
@@ -50,27 +47,23 @@ public abstract class UserInterface : MonoBehaviour
 
     private void OnEnterInterface(GameObject obj)
     {
-        MouseData.InterfaceMouseIsOver = obj.GetComponent<UserInterface>();
+        mouseDragData.OverInterface = true;
     }
 
     private void OnExitInterface(GameObject obj)
     {
-        MouseData.InterfaceMouseIsOver = null;
+        mouseDragData.OverInterface = false;
     }
 
     public abstract void CreateSlots();
 
-    //void Update()
-    //{
-    //    slotsOnInterface.UpdateSlotDisplay();
-    //}
 
     protected void AddEvent(GameObject obj, EventTriggerType type, UnityAction<BaseEventData> action)
     {
         EventTrigger trigger = obj.GetComponentInChildren<EventTrigger>();
         var eventTrigger = new EventTrigger.Entry
         {
-            eventID = type
+            eventID = type,
         };
         eventTrigger.callback.AddListener(action);
         trigger.triggers.Add(eventTrigger);
@@ -78,7 +71,7 @@ public abstract class UserInterface : MonoBehaviour
 
     protected void OnEnter(GameObject obj)
     {
-        MouseData.SlotHoverOver = obj;
+        mouseDragData.SetHoverSlot(slotsOnInterface[obj]);
 
         InventorySlot item = slotsOnInterface[obj];
 
@@ -93,90 +86,77 @@ public abstract class UserInterface : MonoBehaviour
         }
     }
 
+    protected void OnClick(BaseEventData eventData, GameObject obj)
+    {
+        PointerEventData pointerData = eventData as PointerEventData;
+        if (pointerData.button == PointerEventData.InputButton.Left)
+        {
+            mouseDragData.SwapMerge(mouseDragData.Slot, slotsOnInterface[obj]);
+        }
+        else if (pointerData.button == PointerEventData.InputButton.Right)
+        {
+            HandleRightClick(obj);
+        }
+    }
+
+    private void HandleRightClick(GameObject obj)
+    {
+        if (!mouseDragData.HasItem)
+        {
+            int halfCeil = Mathf.CeilToInt(slotsOnInterface[obj].Amount / 2f);
+            InventorySlot slot = new(slotsOnInterface[obj].Item, halfCeil);
+
+            slotsOnInterface[obj].AddAmount(-halfCeil);
+            if (slotsOnInterface[obj].Amount <= 0) slotsOnInterface[obj].RemoveItem();
+            mouseDragData.SwapMerge(mouseDragData.Slot, slot);
+
+        }
+        else
+        {
+            if (mouseDragData.Slot.Amount > 1 && mouseDragData.Slot.CanPlaceInSlot(mouseDragData.HoverSlot.ItemObject))
+            {
+                InventorySlot slot = new(mouseDragData.Slot.Item, 1);
+                mouseDragData.Slot.AddAmount(-1);
+
+                mouseDragData.SwapMerge(slot, mouseDragData.HoverSlot);
+            }
+            else
+            {
+                mouseDragData.SwapMerge(mouseDragData.Slot, mouseDragData.HoverSlot);
+            }
+        }
+    }
+
     protected void OnExit(GameObject obj)
     {
-        MouseData.SlotHoverOver = null;
+        mouseDragData.SetHoverSlot(null);
         TooltipScreenSpaceUI.HideTooltip_Static();
     }
 
-    protected void OnBeginDrag(GameObject obj)
+    protected void OnBeginDrag(BaseEventData eventData, GameObject obj)
     {
-        MouseData.TempItemBeingDragged = CreateTempItem(obj);
     }
 
     protected void OnDrag(GameObject obj)
     {
-        if (MouseData.TempItemBeingDragged != null)
-        {
-            TooltipScreenSpaceUI.HideTooltip_Static();
-            MouseData.TempItemBeingDragged.GetComponent<RectTransform>().position = Mouse.current.position.ReadValue();
-        }
-
     }
 
-    protected void OnEndDrag(GameObject obj)
+    protected void OnEndDrag(BaseEventData eventData, GameObject obj)
     {
-        Destroy(MouseData.TempItemBeingDragged);
-
-        if (MouseData.InterfaceMouseIsOver == null)
+        if (!mouseDragData.OverInterface)
         {
-            slotsOnInterface[obj].RemoveItem();
+            PointerEventData pointerData = eventData as PointerEventData;
+
+            if (pointerData.button == PointerEventData.InputButton.Left)
+                mouseDragData.DropAllItems();
+            else if (pointerData.button == PointerEventData.InputButton.Right)
+                mouseDragData.DropOneItem();
             return;
         }
 
-        if (MouseData.SlotHoverOver && slotsOnInterface[obj].Item.Id >= 0 && MouseData.SlotHoverOver != obj)
+        if (mouseDragData.HasItem)
         {
-            InventorySlot mouseHoverSlotData = MouseData.InterfaceMouseIsOver.slotsOnInterface[MouseData.SlotHoverOver];
-            if (!slotsOnInterface[obj].Item.Equals(mouseHoverSlotData.Item))
-            {
-                Inventory.SwapItems(slotsOnInterface[obj], mouseHoverSlotData);
-            }
-            else
-            {
-                Inventory.MergeItems(slotsOnInterface[obj], mouseHoverSlotData);
-            }
-        }
-    }
-
-    public GameObject CreateTempItem(GameObject obj)
-    {
-        GameObject tempItem = null;
-        if (slotsOnInterface[obj].Item.Id >= 0)
-        {
-            tempItem = new GameObject();
-            var rt = tempItem.AddComponent<RectTransform>();
-            rt.sizeDelta = new(36, 36);
-            tempItem.transform.SetParent(_canvasTransform);
-
-            var img = tempItem.AddComponent<Image>();
-            img.sprite = slotsOnInterface[obj].ItemObject.UIDisplay;
-            img.raycastTarget = false;
-        }
-        return tempItem;
-    }
-}
-
-public static class MouseData
-{
-    public static UserInterface InterfaceMouseIsOver;
-    public static GameObject TempItemBeingDragged;
-    public static GameObject SlotHoverOver;
-}
-
-public static class ExtensionMethods
-{
-    public static void UpdateSlotDisplay(this Dictionary<GameObject, InventorySlot> slotsOnInterface)
-    {
-        foreach (var (obj, slot) in slotsOnInterface)
-        {
-            UIInventorySlot uiSlot = obj.GetComponent<UIInventorySlot>();
-            if (slot.Item.Id < 0)
-                uiSlot.Disable();
-            else
-            {
-                Sprite icon = slot.ItemObject.UIDisplay;
-                uiSlot.Set(icon, slot.Amount.ToString("n0"), slot.Item.Name);
-            }
+            mouseDragData.SwapMerge(mouseDragData.Slot, mouseDragData.HoverSlot);
         }
     }
 }

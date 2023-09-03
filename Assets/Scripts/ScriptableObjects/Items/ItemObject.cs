@@ -50,6 +50,7 @@ public class Item
     {
         Name = "";
         Id = -1;
+        Buffs = new ItemBuff[0];
     }
     public Item(ItemObject item)
     {

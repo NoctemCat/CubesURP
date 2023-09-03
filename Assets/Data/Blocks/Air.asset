@@ -18,8 +18,8 @@ MonoBehaviour:
   Type: 0
   Decription: 
   Data:
-    Name: 
-    Id: -1
+    Name: Air
+    Id: 0
     Buffs: []
   BlockType: 0
   IsSolid: 0
