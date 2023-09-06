@@ -79,11 +79,15 @@ public class MouseDragData : MonoBehaviour
         if (!HasItem || OverInterface) return;
         Slot.AddAmount(-1);
 
-        _eventSystem.DropItems(
-            _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
-            _player.GetDropItemVelocity(),
-            Slot.ItemObject, 1
-        );
+        DropItemsArgs itemsArgs = new()
+        {
+            origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
+            velocity = _player.GetDropItemVelocity(),
+            itemObject = Slot.ItemObject,
+            amount = 1
+        };
+        _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
+
         if (Slot.Amount <= 0) Slot.RemoveItem();
     }
 
@@ -91,11 +95,14 @@ public class MouseDragData : MonoBehaviour
     {
         if (!HasItem || OverInterface) return;
 
-        _eventSystem.DropItems(
-            _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
-            _player.GetDropItemVelocity(),
-            Slot.ItemObject, Slot.Amount
-        );
+        DropItemsArgs itemsArgs = new()
+        {
+            origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
+            velocity = _player.GetDropItemVelocity(),
+            itemObject = Slot.ItemObject,
+            amount = Slot.Amount
+        };
+        _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
         Slot.RemoveItem();
     }
 

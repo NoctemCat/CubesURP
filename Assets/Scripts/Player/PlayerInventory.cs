@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -10,9 +11,11 @@ public class PlayerInventory : MonoBehaviour
 {
     private World World;
     private EventSystem _eventSystem;
+    private InventorySystem _inventorySystem;
     private Player _player;
     private InventoryObject _toolbar;
     private InventoryObject _inventory;
+    private InventoryObject _creativeInventory;
     public InventoryObject EquipmentObj;
 
     [SerializeField] private GameObject _inventoryScreen;
@@ -41,6 +44,9 @@ public class PlayerInventory : MonoBehaviour
 
     [Range(0.1f, 2f)]
     [SerializeField] private float _dropItemDelay;
+
+    public bool creativeMode = false;
+
     private void Start()
     {
         World = World.Instance;
@@ -49,27 +55,50 @@ public class PlayerInventory : MonoBehaviour
 
         //InventorySystem.
         _tooltip = ServiceLocator.Get<TooltipUi>();
-        var inventorySystem = ServiceLocator.Get<InventorySystem>();
+        _inventorySystem = ServiceLocator.Get<InventorySystem>();
 
         _toolbar = new InventoryObject(9, "Toolbar");
         _inventory = new InventoryObject(24, "Player Inventory");
+        _creativeInventory = new InventoryObject(24, "Creative Inventory");
 
-        inventorySystem.RegisterInventory(_toolbar);
-        inventorySystem.RegisterInventory(_inventory);
+        _inventorySystem.RegisterInventory(_toolbar);
+        _inventorySystem.RegisterInventory(_inventory);
+        _inventorySystem.RegisterInventory(_creativeInventory);
 
-        inventorySystem.Show(_toolbar);
+        _inventorySystem.Show(_toolbar);
 
         //ToolbarObj = inventorySystem.Get("Toolbar");
         //InventoryObj = inventorySystem.Get("Player Inventory");
 
         //inventorySystem.Show(ToolbarObj);
-
+        PopulateCreativeInventory();
         InInventory = false;
 
-        var eventSystem = ServiceLocator.Get<EventSystem>();
-        eventSystem.OnResumeGame += SetCursorState;
+        //eventSystem.OnResumeGame += SetCursorState;
+        _eventSystem.StartListening(EventType.ResumeGame, SetCursorStateHandler);
 
         DropItemDelay = new(DropItem, _dropItemDelay);
+    }
+
+    private void PopulateCreativeInventory()
+    {
+        var items = ServiceLocator.Get<ItemDatabaseObject>();
+
+        var itemsList = items.ItemObjects.ToList();
+        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.BlockType == Block.Invalid);
+        for (Block i = 0; i < Block.Invalid; i++)
+        {
+            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.BlockType == i);
+            if (itemI != -1)
+            {
+                _creativeInventory.AddItem(new(itemsList[itemI]), 99);
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        _eventSystem.StopListening(EventType.ResumeGame, SetCursorStateHandler);
     }
 
     private void OnValidate()
@@ -86,10 +115,10 @@ public class PlayerInventory : MonoBehaviour
 
         InInventory = !InInventory;
 
-        var inventorySystem = ServiceLocator.Get<InventorySystem>();
+        var inventory = creativeMode ? _creativeInventory : _inventory;
 
-        if (InInventory) inventorySystem.Show(_inventory);
-        else inventorySystem.Hide(_inventory);
+        if (InInventory) _inventorySystem.Show(inventory);
+        else _inventorySystem.Hide(inventory);
 
         if (!InInventory)
         {
@@ -101,7 +130,6 @@ public class PlayerInventory : MonoBehaviour
     UniTaskLoop DropItemDelay;
     private void OnDropItem(InputValue value)
     {
-        Debug.Log(value.isPressed);
         if (value.isPressed)
             DropItemDelay.Start();
         else
@@ -116,14 +144,17 @@ public class PlayerInventory : MonoBehaviour
         //if (RemoveItem(new Item(selObj), 1))
         //{
         //}
-        _eventSystem.DropItems(
-            _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
-            _player.GetDropItemVelocity(),
-            selObj, 1
-        );
+        DropItemsArgs itemsArgs = new()
+        {
+            origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
+            velocity = _player.GetDropItemVelocity(),
+            itemObject = selObj,
+            amount = 1
+        };
+        _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
     }
 
-
+    public void SetCursorStateHandler(EventArgs _) => SetCursorState();
     public void SetCursorState()
     {
         if (InInventory)

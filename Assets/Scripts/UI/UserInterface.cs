@@ -30,12 +30,19 @@ public abstract class UserInterface : MonoBehaviour
 
         Inventory = inventory;
         //_canvasTransform = transform.root.GetComponent<Canvas>().transform;
+        CreateSlots();
         for (int i = 0; i < Inventory.Slots.Length; i++)
         {
             Inventory.Slots[i].OnAfterUpdate += OnSlotUpdate;
             Inventory.Slots[i].OnBeforeUpdate += OnBeforeUpdate;
         }
-        CreateSlots();
+
+        for (int i = 0; i < Inventory.Slots.Length; i++)
+        {
+            UIInventorySlot uiSlot = Inventory.Slots[i].SlotDisplay.GetComponent<UIInventorySlot>();
+            uiSlot.Init();
+            OnSlotUpdate(Inventory.Slots[i]);
+        }
     }
 
     public void Reset()
@@ -48,6 +55,8 @@ public abstract class UserInterface : MonoBehaviour
                 Inventory.Slots[i].OnBeforeUpdate -= OnBeforeUpdate;
             }
             DestroySlots();
+
+
         }
     }
 
@@ -176,7 +185,7 @@ public abstract class UserInterface : MonoBehaviour
             return;
         }
 
-        if (_mouseDragData.HasItem)
+        if (_mouseDragData.HasItem && _mouseDragData.HoverSlot is not null)
         {
             _mouseDragData.SwapMerge(_mouseDragData.Slot, _mouseDragData.HoverSlot);
         }

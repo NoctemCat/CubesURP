@@ -11,17 +11,10 @@ using System.Runtime.Serialization;
 //[CreateAssetMenu(fileName = "New Inventory", menuName = "Inventory System/Inventory")]
 public class InventoryObject
 {
-    [field: SerializeField] public string SavePath { get; private set; }
-    //public int Capacity;
-    //public Inventory Container;
     private readonly ItemDatabaseObject _database;
-    //public InventorySlot[] GetSlots => Container.Slots;
     public InventorySlot[] Slots { get; private set; }
     public string Id { get; private set; }
-    //private void OnEnable()
-    //{
-    //    Database = ;
-    //}
+
     public InventoryObject(int size = 20, string id = "")
     {
         _database = ServiceLocator.Get<ItemDatabaseObject>();
@@ -38,7 +31,6 @@ public class InventoryObject
 
     public bool AddItem(Item item, int amount)
     {
-        //if
         InventorySlot slot = FindItemOnInventory(item);
         if (!_database.ItemObjects[item.Id].Stackable || slot == null)
         {
@@ -132,38 +124,38 @@ public class InventoryObject
         item.RemoveItem();
     }
 
-    //[ContextMenu("Save")]
-    public void Save()
-    {
-        //string saveData = JsonUtility.ToJson(this, true);
-        //BinaryFormatter bf = new();
-        //using FileStream file = File.Create(Path.Combine(Application.persistentDataPath, SavePath));
-        //bf.Serialize(file, saveData);
+    ////[ContextMenu("Save")]
+    //public void Save()
+    //{
+    //    //string saveData = JsonUtility.ToJson(this, true);
+    //    //BinaryFormatter bf = new();
+    //    //using FileStream file = File.Create(Path.Combine(Application.persistentDataPath, SavePath));
+    //    //bf.Serialize(file, saveData);
 
-        IFormatter formatter = new BinaryFormatter();
-        using Stream stream = new FileStream(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Create, FileAccess.Write);
-        formatter.Serialize(stream, Slots);
-    }
+    //    IFormatter formatter = new BinaryFormatter();
+    //    using Stream stream = new FileStream(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Create, FileAccess.Write);
+    //    formatter.Serialize(stream, Slots);
+    //}
 
-    //[ContextMenu("Load")]
-    public void Load()
-    {
-        if (File.Exists(Path.Combine(Application.persistentDataPath, SavePath)))
-        {
-            //BinaryFormatter bf = new();
-            //using FileStream file = File.Open(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Open);
-            //JsonUtility.FromJsonOverwrite(bf.Deserialize(file).ToString(), this);
+    ////[ContextMenu("Load")]
+    //public void Load()
+    //{
+    //    if (File.Exists(Path.Combine(Application.persistentDataPath, SavePath)))
+    //    {
+    //        //BinaryFormatter bf = new();
+    //        //using FileStream file = File.Open(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Open);
+    //        //JsonUtility.FromJsonOverwrite(bf.Deserialize(file).ToString(), this);
 
-            IFormatter formatter = new BinaryFormatter();
-            using Stream stream = new FileStream(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Open, FileAccess.Read);
-            InventorySlot[] temp = (InventorySlot[])formatter.Deserialize(stream);
+    //        IFormatter formatter = new BinaryFormatter();
+    //        using Stream stream = new FileStream(Path.Combine(Application.persistentDataPath, SavePath), FileMode.Open, FileAccess.Read);
+    //        InventorySlot[] temp = (InventorySlot[])formatter.Deserialize(stream);
 
-            for (int i = 0; i < Slots.Length && i < temp.Length; i++)
-            {
-                Slots[i].UpdateSlot(temp[i]);
-            }
-        }
-    }
+    //        for (int i = 0; i < Slots.Length && i < temp.Length; i++)
+    //        {
+    //            Slots[i].UpdateSlot(temp[i]);
+    //        }
+    //    }
+    //}
 
     //[ContextMenu("Clear")]
     public void Clear()

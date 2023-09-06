@@ -16,11 +16,9 @@ public class DynamicInterface : UserInterface
         for (int i = 0; i < Inventory.Slots.Length; i++)
         {
             GameObject obj = Instantiate(SlotPrefab, Content);
-            //UIInventorySlot uiSlot = obj.GetComponent<UIInventorySlot>();
             Inventory.Slots[i].SlotDisplay = obj;
             slotsOnInterface[obj] = Inventory.Slots[i];
 
-            //delegate(BaseEventData eventData) { OnBeginDrag(eventData, obj); }
             AddEvent(obj, EventTriggerType.PointerDown, delegate (BaseEventData eventData) { OnClick(eventData, obj); });
             AddEvent(obj, EventTriggerType.PointerEnter, delegate (BaseEventData eventData) { OnEnter(obj); });
             AddEvent(obj, EventTriggerType.PointerExit, delegate (BaseEventData eventData) { OnExit(obj); });

@@ -44,7 +44,7 @@ public class PauseSystem : MonoBehaviour
         Time.timeScale = 0;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        _eventSystem.PauseGame();
+        _eventSystem.TriggerEvent(EventType.PauseGame);
         _pauseScreen.SetActive(true);
     }
 
@@ -53,7 +53,7 @@ public class PauseSystem : MonoBehaviour
         Time.timeScale = 1;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        _eventSystem.ResumeGame();
+        _eventSystem.TriggerEvent(EventType.ResumeGame);
         _pauseScreen.SetActive(false);
     }
 }

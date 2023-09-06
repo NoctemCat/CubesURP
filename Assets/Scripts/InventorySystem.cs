@@ -39,9 +39,17 @@ public class InventorySystem : MonoBehaviour
     public void RegisterInventory(InventoryObject inventory)
     {
         Inventories[inventory.Id] = inventory;
-        //if (InventoriesUI.TryGetValue(id, out UserInterface userInterface))
+        //if (InventoriesUI.TryGetValue(inventory.Id, out UserInterface userInterface))
         //{
-        //    userInterface.Load(Inventories[id]);
+        //    userInterface.Load(Inventories[inventory.Id]);
+        //}
+        //else
+        //{
+        //    GameObject obj = Instantiate(ScreenPrefab, ScreenHolder);
+        //    UserInterface ui = obj.GetComponent<UserInterface>();
+        //    ui.Load(inventory);
+        //    InventoriesUI[inventory.Id] = ui;
+        //    //obj.SetActive(false);
         //}
     }
 

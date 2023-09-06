@@ -36,12 +36,8 @@ public class Player : MonoBehaviour
 
 
     private Vector3 _velocity;
-    public Vector3 Velocity => _velocity;
     private float verticalMomentum = 0f;
 
-    //private float PX => transform.position.x;
-    //private float PY => transform.position.y;
-    //private float PZ => transform.position.z;
     private Transform _curTransform;
     public bool Front { get; private set; }
     public bool Back { get; private set; }
@@ -88,11 +84,14 @@ public class Player : MonoBehaviour
         {
             World.PlaceBlock(highlightBlock.position, 0);
 
-            _eventSystem.DropItems(
-                highlightBlock.position + new Vector3(0.5f, 0.5f, 0.5f),
-                new(UnityEngine.Random.value * 0.05f, UnityEngine.Random.value * 0.1f, UnityEngine.Random.value * 0.05f),
-                blockObject, 1
-            );
+            DropItemsArgs itemsArgs = new()
+            {
+                origin = highlightBlock.position + new Vector3(0.5f, 0.5f, 0.5f),
+                velocity = new(UnityEngine.Random.value * 0.05f, UnityEngine.Random.value * 0.1f, UnityEngine.Random.value * 0.05f),
+                itemObject = blockObject,
+                amount = 1
+            };
+            _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
         }
     }
 

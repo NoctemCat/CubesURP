@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class GroundItemsPool : MonoBehaviour
 {
+    private EventSystem _eventSystem;
     public List<GameObject> pooledObjects;
     public GameObject objectToPool;
     public int amountToPool;
@@ -21,7 +22,8 @@ public class GroundItemsPool : MonoBehaviour
 
     private void Start()
     {
-        ServiceLocator.Get<EventSystem>().OnDropItems += DropItems;
+        _eventSystem = ServiceLocator.Get<EventSystem>();
+        _eventSystem.StartListening(EventType.DropItems, DropItems);
 
         pooledObjects = new List<GameObject>();
         AddToPool(amountToPool);
@@ -58,18 +60,19 @@ public class GroundItemsPool : MonoBehaviour
         return GetPooledObject();
     }
 
-    public void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)
+    public void DropItems(EventArgs eventArgs)
     {
+        DropItemsArgs args = (DropItemsArgs)eventArgs;
         GameObject item = GetPooledObject();
 
         item.SetActive(true);
-        item.transform.position = origin;
+        item.transform.position = args.origin;
 
         BlockPhysics phys = item.GetComponent<BlockPhysics>();
-        phys.AddVelocity(velocity);
+        phys.AddVelocity(args.velocity);
 
         GroundItem gItem = item.GetComponent<GroundItem>();
-        gItem.SetItem(itemObject, amount);
+        gItem.SetItem(args.itemObject, args.amount);
     }
 
     //public static void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)

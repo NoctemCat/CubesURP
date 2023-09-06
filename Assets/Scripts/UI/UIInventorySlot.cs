@@ -11,11 +11,21 @@ public class UIInventorySlot : MonoBehaviour
     private Image _image;
     private TMP_Text _amount;
     private string _name;
+    private bool _initialized = false;
 
     void Start()
     {
-        _image = transform.GetChild(0).GetChild(0).GetComponent<Image>();
-        _amount = transform.GetChild(1).GetComponent<TMP_Text>();
+        Init();
+    }
+
+    public void Init()
+    {
+        if (!_initialized)
+        {
+            _image = transform.GetChild(0).GetChild(0).GetComponent<Image>();
+            _amount = transform.GetChild(1).GetComponent<TMP_Text>();
+            _initialized = true;
+        }
     }
 
     //public void Set(Item item)

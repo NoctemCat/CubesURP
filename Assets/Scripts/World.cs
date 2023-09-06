@@ -51,6 +51,8 @@ public class World : MonoBehaviour
 
     public string WorldPath { get; private set; }
 
+    private EventSystem _eventSystem;
+
     private void Awake()
     {
         if (Instance == null)
@@ -62,8 +64,8 @@ public class World : MonoBehaviour
 
         LoadSettings();
 
-        var eventSystem = ServiceLocator.Get<EventSystem>();
-        eventSystem.OnResumeGame += LoadSettings;
+        _eventSystem = ServiceLocator.Get<EventSystem>();
+        _eventSystem.StartListening(EventType.ResumeGame, LoadSettingsHandler);
 
         _refreshDistance = false;
 
@@ -116,12 +118,13 @@ public class World : MonoBehaviour
 
     private void OnDestroy()
     {
+        _eventSystem.StopListening(EventType.ResumeGame, LoadSettingsHandler);
+
         SaveSystem.OnDestroyForceSave();
         foreach (var kvp in Chunks)
         {
             kvp.Value.Dispose();
         }
-        VoxelData.Dispose();
         NativeBlocks.Dispose();
         XYZMap.Dispose();
 
@@ -133,9 +136,11 @@ public class World : MonoBehaviour
 
         DummyMap.Dispose();
 
+        VoxelData.Dispose();
         Destroy(Instance);
     }
 
+    public void LoadSettingsHandler(EventArgs _) => LoadSettings();
     public void LoadSettings()
     {
         if (File.Exists($"{Application.dataPath}/settings.cfg"))

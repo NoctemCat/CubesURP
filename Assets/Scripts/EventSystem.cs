@@ -1,24 +1,62 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+
+public enum EventType
+{
+    PauseGame,
+    ResumeGame,
+    DropItems
+}
+
+public class EventArgs
+{
+    public EventType eventType;
+}
+
+public class DropItemsArgs : EventArgs
+{
+    public Vector3 origin;
+    public Vector3 velocity;
+    public ItemObject itemObject;
+    public int amount;
+
+    public DropItemsArgs() => eventType = EventType.DropItems;
+}
 
 public class EventSystem
 {
-    public event Action OnPauseGame;
-    public event Action OnResumeGame;
-    public event Action<Vector3, Vector3, ItemObject, int> OnDropItems;
+    private readonly Dictionary<EventType, Action<EventArgs>> _eventDictionary = new();
 
-    public void PauseGame()
+    public void StartListening(EventType eventType, Action<EventArgs> listener)
     {
-        OnPauseGame?.Invoke();
+        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        {
+            thisEvent += listener;
+            _eventDictionary[eventType] = thisEvent;
+        }
+        else
+        {
+            thisEvent += listener;
+            _eventDictionary.Add(eventType, thisEvent);
+        }
     }
 
-    public void ResumeGame()
+    public void StopListening(EventType eventType, Action<EventArgs> listener)
     {
-        OnResumeGame?.Invoke();
+        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        {
+            thisEvent -= listener;
+            _eventDictionary[eventType] = thisEvent;
+        }
     }
 
-    public void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)
+    public void TriggerEvent(EventType eventType, EventArgs args = null)
     {
-        OnDropItems?.Invoke(origin, velocity, itemObject, amount);
+        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        {
+            args ??= new() { eventType = eventType };
+            thisEvent.Invoke(args);
+        }
     }
 }
