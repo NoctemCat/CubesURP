@@ -5,26 +5,32 @@ using UnityEngine;
 
 public class GroundItemsPool : MonoBehaviour
 {
-    public static GroundItemsPool Instance { get; private set; }
     public List<GameObject> pooledObjects;
     public GameObject objectToPool;
     public int amountToPool;
 
-    void Awake()
+    private void Awake()
     {
-        //SharedInstance = this;Instance
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(this);
+        ServiceLocator.Register(this);
     }
 
-    void Start()
+    private void OnDestroy()
     {
-        pooledObjects = new List<GameObject>();
+        ServiceLocator.Unregister(this);
+    }
 
+    private void Start()
+    {
+        ServiceLocator.Get<EventSystem>().OnDropItems += DropItems;
+
+        pooledObjects = new List<GameObject>();
         AddToPool(amountToPool);
     }
+
+    private void Update()
+    {
+    }
+
     public void AddToPool(int num)
     {
         //amountToPool += num;
@@ -32,6 +38,8 @@ public class GroundItemsPool : MonoBehaviour
         for (int i = 0; i < num; i++)
         {
             tmp = Instantiate(objectToPool, transform);
+            tmp.SetActive(false);
+            tmp.SetActive(true);
             tmp.SetActive(false);
             pooledObjects.Add(tmp);
         }
@@ -50,18 +58,31 @@ public class GroundItemsPool : MonoBehaviour
         return GetPooledObject();
     }
 
-    public static void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)
+    public void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)
     {
-        GameObject item = Instance.GetPooledObject();
+        GameObject item = GetPooledObject();
+
+        item.SetActive(true);
         item.transform.position = origin;
 
         BlockPhysics phys = item.GetComponent<BlockPhysics>();
-        phys.Reset();
         phys.AddVelocity(velocity);
 
         GroundItem gItem = item.GetComponent<GroundItem>();
         gItem.SetItem(itemObject, amount);
-
-        item.SetActive(true);
     }
+
+    //public static void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)
+    //{
+    //    GameObject item = ServiceLocator.Get<GroundItemsPool>().GetPooledObject();
+
+    //    item.SetActive(true);
+    //    item.transform.position = origin;
+
+    //    BlockPhysics phys = item.GetComponent<BlockPhysics>();
+    //    phys.AddVelocity(velocity);
+
+    //    GroundItem gItem = item.GetComponent<GroundItem>();
+    //    gItem.SetItem(itemObject, amount);
+    //}
 }

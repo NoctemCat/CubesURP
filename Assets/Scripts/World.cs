@@ -21,11 +21,12 @@ public class World : MonoBehaviour
     [field: SerializeField] public Settings Settings { get; private set; }
 
     public VoxelData VoxelData { get; private set; }
-    public NativeArray<BlockStruct> Blocks { get; private set; }
+    public BlockObject[] Blocks { get; private set; }
+    public NativeArray<BlockStruct> NativeBlocks { get; private set; }
     public NativeArray<int3> XYZMap { get; private set; }
     public NativeArray<BiomeStruct> Biomes { get; private set; }
+    //public float3 RandomXYZ { get; private set; }
 
-    [field: SerializeField] public BlockDictionary BlocksScObj { get; private set; }
     [SerializeField] private BiomeAttributes[] BiomeScObjs;
     [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
     [field: SerializeField] public Material SolidMaterial { get; private set; }
@@ -33,7 +34,6 @@ public class World : MonoBehaviour
 
     public GameObject PlayerObj;
 
-    public float3 RandomXYZ { get; private set; }
 
     public Dictionary<Vector3Int, Chunk> Chunks { get; private set; }
     public NativeArray<Block> DummyMap { get; private set; }
@@ -50,8 +50,6 @@ public class World : MonoBehaviour
     private bool _refreshDistance;
 
     public string WorldPath { get; private set; }
-    public Action OnPause;
-    public Action OnResume;
 
     private void Awake()
     {
@@ -63,17 +61,22 @@ public class World : MonoBehaviour
         WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.WorldName);
 
         LoadSettings();
-        OnResume += LoadSettings;
+
+        var eventSystem = ServiceLocator.Get<EventSystem>();
+        eventSystem.OnResumeGame += LoadSettings;
 
         _refreshDistance = false;
 
         Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.Seed.GetHashCode(), 0)));
-        RandomXYZ = rng.NextFloat3() * 10000;
+        float3 randomXYZ = rng.NextFloat3() * 10000;
 
-        VoxelData = new(RandomXYZ);
-        Blocks = WorldHelper.InitBlocksMapping(BlocksScObj);
+        VoxelData = new(randomXYZ);
+        var itemDatabase = ServiceLocator.Get<ItemDatabaseObject>();
+
+        Blocks = WorldHelper.InitBlocksMapping(itemDatabase);
+        NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
-        //Biomes = new BiomeStruct[BiomeScObjs.Length];
+
         NativeArray<BiomeStruct> biomesTemp = new(BiomeScObjs.Length, Allocator.Persistent);
         for (int i = 0; i < BiomeScObjs.Length; i++)
         {
@@ -113,13 +116,13 @@ public class World : MonoBehaviour
 
     private void OnDestroy()
     {
-        SaveSystem.DestroyForceSave();
+        SaveSystem.OnDestroyForceSave();
         foreach (var kvp in Chunks)
         {
             kvp.Value.Dispose();
         }
         VoxelData.Dispose();
-        Blocks.Dispose();
+        NativeBlocks.Dispose();
         XYZMap.Dispose();
 
         for (int i = 0; i < Biomes.Length; i++)
@@ -188,10 +191,13 @@ public class World : MonoBehaviour
 
     }
 
-
+    //Vector3Int lastPlayerChunk = new(-100, -100);
+    //float timer = 0f;
+    //float timerGarbage = 0f;
     private void Update()
     {
         PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+        _results.Clear();
 
         for (int i = 0; i < ActiveChunks.Count; i++)
         {
@@ -248,16 +254,18 @@ public class World : MonoBehaviour
             }
             toRemove.Clear();
 
-            await UniTask.WaitForSeconds(6f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
-            if (token.IsCancellationRequested) return;
+            bool isCalncelled = await UniTask.WaitForSeconds(4f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+            DisposeChunks();
+            if (isCalncelled) return;
 
-            DisposeChunks().Forget();
+            isCalncelled = await UniTask.WaitForSeconds(2f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+            if (isCalncelled) return;
         }
     }
 
-    async UniTaskVoid DisposeChunks()
+    void DisposeChunks()
     {
-        await UniTask.WaitForSeconds(4f);
+        //await UniTask.WaitForSeconds(4f);
         for (int i = 0; i < DisposedChunks.Count; i++)
         {
             DisposedChunks[i].Dispose();
@@ -271,6 +279,7 @@ public class World : MonoBehaviour
     async UniTask CheckDistance(CancellationToken token)
     {
         Vector3Int LastPlayerChunk;
+        bool isCalncelled = false;
 
         while (true)
         {
@@ -281,29 +290,29 @@ public class World : MonoBehaviour
             )
             {
                 LastPlayerChunk = PlayerChunk;
-                await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
-                if (token.IsCancellationRequested) return;
+                isCalncelled = await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+                if (isCalncelled) return;
             }
 
-            await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk || _refreshDistance, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
-            if (token.IsCancellationRequested) return;
+            Debug.Log("All");
+            isCalncelled = await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk || _refreshDistance, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
+            if (isCalncelled) return;
             _refreshDistance = false;
         }
     }
 
     bool DeactivateFarChunks()
     {
-        foreach (Chunk chunk in ActiveChunks)
+        for (int i = 0; i < ActiveChunks.Count; i++)
         {
-            Vector3Int viewChunkPos = I3ToVI3(chunk.ChunkPos) - PlayerChunk;
+            Vector3Int viewChunkPos = I3ToVI3(ActiveChunks[i].ChunkPos) - PlayerChunk;
             if (
                 viewChunkPos.x < -Settings.ViewDistance || viewChunkPos.x > Settings.ViewDistance ||
                 viewChunkPos.y < -Settings.ViewDistance || viewChunkPos.y > Settings.ViewDistance ||
                 viewChunkPos.z < -Settings.ViewDistance || viewChunkPos.z > Settings.ViewDistance
             )
             {
-                chunk.IsActive = false;
-
+                ActiveChunks[i].IsActive = false;
             }
         }
         ActiveChunks.Clear();
@@ -314,9 +323,10 @@ public class World : MonoBehaviour
     {
         bool allGenerated = true;
         int toGenerate = Settings.GenerateAtOnce;
-        foreach (var coord in ViewCoords)
+
+        for (int i = 0; i < ViewCoords.Count; i++)
         {
-            Vector3Int checkCoord = PlayerChunk + coord;
+            Vector3Int checkCoord = PlayerChunk + ViewCoords[i];
             if (Chunks.ContainsKey(checkCoord)) continue;
 
             string chunkName = PathHelper.GenerateChunkName(checkCoord);
@@ -366,9 +376,9 @@ public class World : MonoBehaviour
 
     void ActivateNearChunks()
     {
-        foreach (var coord in ViewCoords)
+        for (int i = 0; i < ViewCoords.Count; i++)
         {
-            Vector3Int checkCoord = PlayerChunk + coord;
+            Vector3Int checkCoord = PlayerChunk + ViewCoords[i];
             if (Chunks.TryGetValue(checkCoord, out var chunk))
             {
                 if (!chunk.IsActive)
@@ -474,8 +484,18 @@ public class World : MonoBehaviour
         }
     }
 
+    private readonly Dictionary<Vector3, bool> _results = new();
     public bool CheckForVoxel(Vector3 worldPos)
     {
+        Vector3Int worldPosInt = new(
+            Mathf.FloorToInt(worldPos.x),
+            Mathf.FloorToInt(worldPos.y),
+            Mathf.FloorToInt(worldPos.z)
+        );
+
+        if (_results.TryGetValue(worldPosInt, out bool result)) return result;
+
+        result = false;
         Vector3Int thisChunk = GetChunkCoordFromVector3(worldPos);
 
         if (Chunks.TryGetValue(thisChunk, out Chunk chunk))
@@ -486,9 +506,12 @@ public class World : MonoBehaviour
             chunk.VoxelMapAccess.Complete();
 
             if (!chunk.IsActive) return false;
-            return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].IsSolid;
+            //Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].
+            result = Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].IsSolid;
         }
-        return false;
+
+        _results.Add(worldPosInt, result);
+        return result;
     }
     public BlockObject GetVoxel(Vector3 worldPos)
     {
@@ -499,9 +522,9 @@ public class World : MonoBehaviour
             int3 block = GetPosInChunkFromVector3(thisChunk, worldPos);
             chunk.VoxelMapAccess.Complete();
 
-            return BlocksScObj.Blocks[chunk.VoxelMap[CalcIndex(block)]];
+            return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]];
         }
-        return BlocksScObj.Blocks[Block.Air];
+        return Blocks[(int)Block.Air];
     }
 
     private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;

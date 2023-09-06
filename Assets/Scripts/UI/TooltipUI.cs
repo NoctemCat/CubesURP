@@ -5,19 +5,17 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class TooltipScreenSpaceUI : MonoBehaviour
+public class TooltipUi : MonoBehaviour
 {
-    public static TooltipScreenSpaceUI Instance { get; private set; }
     private RectTransform _background;
     private TextMeshProUGUI _textMeshPro;
     private RectTransform _rectTransform;
     private Canvas _canvas;
     private Func<string> _getTooltipTextFunc;
 
-
     private void Awake()
     {
-        Instance = this;
+        ServiceLocator.Register(this);
 
         _background = transform.Find("Background").GetComponent<RectTransform>();
         _textMeshPro = transform.Find("Text").GetComponent<TextMeshProUGUI>();
@@ -25,6 +23,10 @@ public class TooltipScreenSpaceUI : MonoBehaviour
         _canvas = transform.GetComponentInParent<Canvas>();
 
         HideTooltip();
+    }
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister(this);
     }
 
     private void Update()
@@ -63,12 +65,12 @@ public class TooltipScreenSpaceUI : MonoBehaviour
         _background.sizeDelta = textSize;
     }
 
-    private void ShowTooltip(string tooltipText)
+    public void ShowTooltip(string tooltipText)
     {
         ShowTooltip(() => tooltipText);
     }
 
-    private void ShowTooltip(Func<string> getTooltip)
+    public void ShowTooltip(Func<string> getTooltip)
     {
         _getTooltipTextFunc = getTooltip;
         SetText(_getTooltipTextFunc());
@@ -76,24 +78,8 @@ public class TooltipScreenSpaceUI : MonoBehaviour
         gameObject.SetActive(true);
     }
 
-
-    private void HideTooltip()
+    public void HideTooltip()
     {
         gameObject.SetActive(false);
-    }
-
-    public static void ShowTooltip_Static(string tooltipText)
-    {
-        Instance.ShowTooltip(tooltipText);
-    }
-
-    public static void ShowTooltip_Static(Func<string> getTooltip)
-    {
-        Instance.ShowTooltip(getTooltip);
-    }
-
-    public static void HideTooltip_Static()
-    {
-        Instance.HideTooltip();
     }
 }

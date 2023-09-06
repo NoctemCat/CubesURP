@@ -14,11 +14,19 @@ public class Toolbar : StaticInterface
     public RectTransform highlight;
     int slotIndex = 0;
 
-    //public override void Start()
-    //{
-    //    base.Start();
+    public override void Start()
+    {
+        base.Start();
+        var inventorySystem = ServiceLocator.Get<InventorySystem>();
+        inventorySystem.RegisterInventoryUI("Toolbar", this);
+    }
 
-    //}
+    public override void CreateSlots()
+    {
+        base.CreateSlots();
+        for (int i = 0; i < Inventory.Slots.Length; i++)
+            Inventory.Slots[i].OnAfterUpdate += OnToolbarUpdate;
+    }
 
     private void OnEnable()
     {
@@ -57,18 +65,6 @@ public class Toolbar : StaticInterface
         UpdateSelectedBlock();
     }
 
-
-    public override void Start()
-    {
-        base.Start();
-
-        for (int i = 0; i < Inventory.GetSlots.Length; i++)
-        {
-            Inventory.GetSlots[i].OnAfterUpdate += OnToolbarUpdate;
-            //Inventory.GetSlots[i].OnBeforeUpdate += OnBeforeUpdate;
-        }
-    }
-
     private void OnToolbarUpdate(InventorySlot slot)
     {
         UpdateSelectedBlock();
@@ -83,23 +79,6 @@ public class Toolbar : StaticInterface
         else
             player.selectedBlockIndex = -1;
     }
-
-
-    //private void Start()
-    //{
-    //    for (int i = 0; i < 9; i++)
-    //    {
-    //        itemSlots[i].icon = transform.GetChild(i).GetChild(0).GetComponent<Image>();
-    //    }
-
-    //    foreach (ItemSlot slot in itemSlots)
-    //    {
-    //        slot.icon.sprite = World.Instance.BlocksScObj.blocks[slot.itemID].icon;
-    //        slot.icon.enabled = true;
-    //    }
-
-    //    player.selectedBlockIndex = itemSlots[slotIndex].itemID;
-    //}
 }
 
 //[Serializable]

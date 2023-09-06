@@ -38,6 +38,8 @@ public abstract class ItemObject : ScriptableObject
         Item item = new(this);
         return item;
     }
+
+    protected virtual void OnEnable() { }
 }
 
 [Serializable]

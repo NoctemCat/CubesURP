@@ -2,29 +2,45 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
 public static class WorldHelper
 {
-    public static NativeArray<BlockStruct> InitBlocksMapping(BlockDictionary dict)
+    public static BlockObject[] InitBlocksMapping(ItemDatabaseObject items)
     {
-        NativeArray<BlockStruct> blocks = new((int)Block.Invalid, Allocator.Persistent);
+        BlockObject[] blocks = new BlockObject[(int)Block.Invalid];
 
+        var itemsList = items.ItemObjects.ToList();
+        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.BlockType == Block.Invalid);
         for (Block i = 0; i < Block.Invalid; i++)
         {
-            if (dict.Blocks.TryGetValue(i, out var blockObj))
+            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.BlockType == i);
+            if (itemI != -1)
             {
-                blocks[(int)i] = new(blockObj);
+                blocks[(int)i] = (BlockObject)itemsList[itemI];
             }
             else
             {
-                blocks[(int)i] = new(dict.MissingBlock);
+                blocks[(int)i] = missing;
             }
         }
 
         return blocks;
+    }
+
+    public static NativeArray<BlockStruct> InitNativeBlocksMapping(BlockObject[] blocks)
+    {
+        NativeArray<BlockStruct> nativeBlocks = new(blocks.Length, Allocator.Persistent);
+
+        for (int i = 0; i < blocks.Length; i++)
+        {
+            nativeBlocks[i] = new(blocks[i]);
+        }
+
+        return nativeBlocks;
     }
 
     public static NativeArray<int3> InitXYZMap(VoxelData data)
@@ -64,11 +80,11 @@ public static class WorldHelper
             }
         }
 
-        check.Sort(delegate (Vector3Int a, Vector3Int b)
+        check.Sort((Vector3Int a, Vector3Int b) =>
         {
             if (a.sqrMagnitude > b.sqrMagnitude)
                 return 1;
-            if (a.sqrMagnitude < b.sqrMagnitude)
+            else if (a.sqrMagnitude < b.sqrMagnitude)
                 return -1;
             else
                 return 0;

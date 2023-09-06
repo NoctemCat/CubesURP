@@ -10,7 +10,6 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 using static CubesUtils;
 
@@ -36,10 +35,10 @@ public class Chunk
     private MeshDataHolder _holder;
 
     private bool _isLoaded;
-    private bool _isDisposed;
     private bool _voxelMapGenerated;
     private bool _isGeneratingMesh;
     private bool _dirtyMesh;
+    public bool IsDisposed { get; private set; }
 
     private bool _requestingStop;
     private bool _isActive;
@@ -114,13 +113,12 @@ public class Chunk
         _structures = new(100, Allocator.Persistent);
         NeighbourModifications = new(512, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
-        _holder.Init(ChunkPos);
 
         _voxelMapGenerated = false;
         _isGeneratingMesh = false;
         _requestingStop = false;
 
-        _isDisposed = false;
+        IsDisposed = false;
         _dirtyMesh = false;
         NeighboursGenerated = VoxelFlags.None;
 
@@ -154,7 +152,7 @@ public class Chunk
     public void Dispose()
     {
         IsActive = false;
-        _isDisposed = true;
+        IsDisposed = true;
         VoxelMapAccess.Complete();
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
@@ -164,7 +162,7 @@ public class Chunk
         NeighbourModifications.Dispose();
         _modifications.Dispose();
         _structures.Dispose();
-        _holder.Dispose();
+        //_holder.Dispose();
         UnityEngine.Object.Destroy(_chunkMesh);
         UnityEngine.Object.Destroy(_chunkObject);
         VoxelMap.Dispose();
@@ -236,7 +234,7 @@ public class Chunk
         //Debug.Log(mod.Count);
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
-        if (_isDisposed) return;
+        if (IsDisposed) return;
         _modifications.AddRange(mod.ToNativeArray(Allocator.Temp));
     }
 
@@ -249,7 +247,7 @@ public class Chunk
     {
         VoxelMapAccess = GenerateVoxelMap();
         await VoxelMapAccess;
-        if (_isDisposed) return;
+        if (IsDisposed) return;
 
         _structures.Clear();
 
@@ -265,10 +263,8 @@ public class Chunk
 
     private async UniTaskVoid StartMeshGen()
     {
-        //count++;
-        //if (count > 1)
         _isGeneratingMesh = true;
-        //DirtyMesh = false;
+        _holder.Init(ChunkPos);
 
         var isFinished = await GenerateMesh();
         if (isFinished)
@@ -281,6 +277,7 @@ public class Chunk
             _requestingStop = false;
         }
 
+        _holder.Dispose();
         _isGeneratingMesh = false;
     }
 
@@ -389,25 +386,8 @@ public struct GenerateChunkJob : IJobParallelFor
 
     public void Execute(int i)
     {
-        //ref var voxelData = ref VoxelDataRef.Data.Value;
-        //int3 scaledPos = new(
-        //    ChunkPos.x * Data.ChunkWidth + XYZMap[i].x,
-        //    ChunkPos.y * Data.ChunkHeight + XYZMap[i].y,
-        //    ChunkPos.z * Data.ChunkLength + XYZMap[i].z
-        //);
-
-        //int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
-        //int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
-        //int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
-        // pos in chunk XYZMap[i]
-        // chunk pos ChunkPos
         int3 scaledPos = ChunkPos * Data.ChunkDimensions + XYZMap[i];
-
         VoxelMap[i] = GetVoxel(ChunkPos, scaledPos);
-
-        //VoxelMap[i] = Block.Bedrock;
-        //Debug.Log(scaledPos);
-        //Debug.Log(VoxelMap[i]);
     }
 
     public Block GetVoxel(int3 chunkPos, int3 pos)

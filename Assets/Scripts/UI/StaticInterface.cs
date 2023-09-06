@@ -23,9 +23,22 @@ public class StaticInterface : UserInterface
             AddEvent(obj, EventTriggerType.EndDrag, delegate (BaseEventData eventData) { OnEndDrag(eventData, obj); });
             AddEvent(obj, EventTriggerType.Drag, delegate (BaseEventData eventData) { OnDrag(obj); });
 
-            Inventory.GetSlots[i].SlotDisplay = obj;
-            slotsOnInterface[obj] = Inventory.Container.Slots[i];
+            Inventory.Slots[i].SlotDisplay = obj;
+            slotsOnInterface[obj] = Inventory.Slots[i];
         }
     }
 
+    public override void DestroySlots()
+    {
+        for (int i = 0; i < Slots.Length; i++)
+        {
+            var obj = Slots[i];
+
+            EventTrigger trigger = obj.GetComponentInChildren<EventTrigger>();
+            trigger.triggers.Clear();
+
+            Inventory.Slots[i].SlotDisplay = null;
+            slotsOnInterface.Remove(obj);
+        }
+    }
 }

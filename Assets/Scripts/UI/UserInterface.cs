@@ -10,26 +10,50 @@ using UnityEngine.InputSystem;
 
 public abstract class UserInterface : MonoBehaviour
 {
-    public InventoryObject Inventory;
-    public MouseDragData mouseDragData;
-
+    protected InventoryObject Inventory = null;
     protected Dictionary<GameObject, InventorySlot> slotsOnInterface = new();
 
-    //private Transform _canvasTransform;
+    private MouseDragData _mouseDragData;
+    private TooltipUi _tooltip;
 
     public virtual void Start()
     {
-        //_canvasTransform = transform.root.GetComponent<Canvas>().transform;
-        for (int i = 0; i < Inventory.GetSlots.Length; i++)
-        {
-            Inventory.GetSlots[i].OnAfterUpdate += OnSlotUpdate;
-            Inventory.GetSlots[i].OnBeforeUpdate += OnBeforeUpdate;
-        }
-        CreateSlots();
+        _tooltip = ServiceLocator.Get<TooltipUi>();
+        _mouseDragData = ServiceLocator.Get<MouseDragData>();
         AddEvent(gameObject, EventTriggerType.PointerEnter, delegate { OnEnterInterface(gameObject); });
         AddEvent(gameObject, EventTriggerType.PointerExit, delegate { OnExitInterface(gameObject); });
     }
 
+    public virtual void Load(InventoryObject inventory)
+    {
+        if (Inventory is not null && Inventory.Id == inventory.Id) return;
+
+        Inventory = inventory;
+        //_canvasTransform = transform.root.GetComponent<Canvas>().transform;
+        for (int i = 0; i < Inventory.Slots.Length; i++)
+        {
+            Inventory.Slots[i].OnAfterUpdate += OnSlotUpdate;
+            Inventory.Slots[i].OnBeforeUpdate += OnBeforeUpdate;
+        }
+        CreateSlots();
+    }
+
+    public void Reset()
+    {
+        if (Inventory is not null)
+        {
+            for (int i = 0; i < Inventory.Slots.Length; i++)
+            {
+                Inventory.Slots[i].OnAfterUpdate -= OnSlotUpdate;
+                Inventory.Slots[i].OnBeforeUpdate -= OnBeforeUpdate;
+            }
+            DestroySlots();
+        }
+    }
+
+
+    public abstract void CreateSlots();
+    public abstract void DestroySlots();
 
     private void OnSlotUpdate(InventorySlot slot)
     {
@@ -47,16 +71,13 @@ public abstract class UserInterface : MonoBehaviour
 
     private void OnEnterInterface(GameObject obj)
     {
-        mouseDragData.OverInterface = true;
+        _mouseDragData.OverInterface = true;
     }
 
     private void OnExitInterface(GameObject obj)
     {
-        mouseDragData.OverInterface = false;
+        _mouseDragData.OverInterface = false;
     }
-
-    public abstract void CreateSlots();
-
 
     protected void AddEvent(GameObject obj, EventTriggerType type, UnityAction<BaseEventData> action)
     {
@@ -71,27 +92,29 @@ public abstract class UserInterface : MonoBehaviour
 
     protected void OnEnter(GameObject obj)
     {
-        mouseDragData.SetHoverSlot(slotsOnInterface[obj]);
+        _mouseDragData.SetHoverSlot(slotsOnInterface[obj]);
 
         InventorySlot item = slotsOnInterface[obj];
 
         if (item.Item.Id < 0)
         {
-            TooltipScreenSpaceUI.HideTooltip_Static();
+            _tooltip.HideTooltip();
         }
         else
         {
             string tooltipText = $"{item.Item.Name}\n{item.Amount}".Trim();
-            TooltipScreenSpaceUI.ShowTooltip_Static(tooltipText);
+            _tooltip.ShowTooltip(tooltipText);
         }
     }
 
     protected void OnClick(BaseEventData eventData, GameObject obj)
     {
+        if (!_mouseDragData.OverInterface) return;
+
         PointerEventData pointerData = eventData as PointerEventData;
         if (pointerData.button == PointerEventData.InputButton.Left)
         {
-            mouseDragData.SwapMerge(mouseDragData.Slot, slotsOnInterface[obj]);
+            _mouseDragData.SwapMerge(_mouseDragData.Slot, slotsOnInterface[obj]);
         }
         else if (pointerData.button == PointerEventData.InputButton.Right)
         {
@@ -101,36 +124,35 @@ public abstract class UserInterface : MonoBehaviour
 
     private void HandleRightClick(GameObject obj)
     {
-        if (!mouseDragData.HasItem)
+        if (!_mouseDragData.HasItem)
         {
             int halfCeil = Mathf.CeilToInt(slotsOnInterface[obj].Amount / 2f);
             InventorySlot slot = new(slotsOnInterface[obj].Item, halfCeil);
 
             slotsOnInterface[obj].AddAmount(-halfCeil);
             if (slotsOnInterface[obj].Amount <= 0) slotsOnInterface[obj].RemoveItem();
-            mouseDragData.SwapMerge(mouseDragData.Slot, slot);
-
+            _mouseDragData.SwapMerge(_mouseDragData.Slot, slot);
         }
         else
         {
-            if (mouseDragData.Slot.Amount > 1 && mouseDragData.Slot.CanPlaceInSlot(mouseDragData.HoverSlot.ItemObject))
+            if (_mouseDragData.Slot.Amount > 1 && _mouseDragData.Slot.CanPlaceInSlot(_mouseDragData.HoverSlot.ItemObject))
             {
-                InventorySlot slot = new(mouseDragData.Slot.Item, 1);
-                mouseDragData.Slot.AddAmount(-1);
+                InventorySlot slot = new(_mouseDragData.Slot.Item, 1);
+                _mouseDragData.Slot.AddAmount(-1);
 
-                mouseDragData.SwapMerge(slot, mouseDragData.HoverSlot);
+                _mouseDragData.SwapMerge(slot, _mouseDragData.HoverSlot);
             }
             else
             {
-                mouseDragData.SwapMerge(mouseDragData.Slot, mouseDragData.HoverSlot);
+                _mouseDragData.SwapMerge(_mouseDragData.Slot, _mouseDragData.HoverSlot);
             }
         }
     }
 
     protected void OnExit(GameObject obj)
     {
-        mouseDragData.SetHoverSlot(null);
-        TooltipScreenSpaceUI.HideTooltip_Static();
+        _mouseDragData.SetHoverSlot(null);
+        _tooltip.HideTooltip();
     }
 
     protected void OnBeginDrag(BaseEventData eventData, GameObject obj)
@@ -143,20 +165,20 @@ public abstract class UserInterface : MonoBehaviour
 
     protected void OnEndDrag(BaseEventData eventData, GameObject obj)
     {
-        if (!mouseDragData.OverInterface)
+        if (!_mouseDragData.OverInterface)
         {
             PointerEventData pointerData = eventData as PointerEventData;
 
             if (pointerData.button == PointerEventData.InputButton.Left)
-                mouseDragData.DropAllItems();
+                _mouseDragData.DropAllItems();
             else if (pointerData.button == PointerEventData.InputButton.Right)
-                mouseDragData.DropOneItem();
+                _mouseDragData.DropOneItem();
             return;
         }
 
-        if (mouseDragData.HasItem)
+        if (_mouseDragData.HasItem)
         {
-            mouseDragData.SwapMerge(mouseDragData.Slot, mouseDragData.HoverSlot);
+            _mouseDragData.SwapMerge(_mouseDragData.Slot, _mouseDragData.HoverSlot);
         }
     }
 }

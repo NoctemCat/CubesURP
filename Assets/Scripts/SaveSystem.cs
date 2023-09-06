@@ -59,24 +59,26 @@ public class SaveSystem : MonoBehaviour
         await UniTask.SwitchToThreadPool();
         while (true)
         {
-            await UniTask.WaitUntil(() => { return _time > 4f || _forceSave; }, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
-            if (token.IsCancellationRequested) return;
+            bool isCalncelled = await UniTask.WaitUntil(() => { return _time > 4f || _forceSave; }, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
+            if (isCalncelled) return;
 
             _forceSave = false;
 
-            for (int i = 0; i < ChunksToSave.Count; i++)
-                copy.Add(ChunksToSave[i]);
-            ChunksToSave.Clear();
-
-            tasks.Clear();
-            foreach (var chunk in copy)
+            if (ChunksToSave.Count > 0)
             {
-                tasks.Add(SaveChunkAsync(chunk));
+                for (int i = 0; i < ChunksToSave.Count; i++)
+                    copy.Add(ChunksToSave[i]);
+                ChunksToSave.Clear();
+
+                for (int i = 0; i < copy.Count; i++)
+                    tasks.Add(SaveChunkAsync(copy[i]));
+
+                await UniTask.WhenAll(tasks);
+
+                tasks.Clear();
+                copy.Clear();
             }
 
-            await UniTask.WhenAll(tasks);
-
-            copy.Clear();
             _time = 0f;
         }
     }
@@ -96,15 +98,16 @@ public class SaveSystem : MonoBehaviour
 
         await chunk.VoxelMapAccess;
         chunk.VoxelMap.CopyTo(chunkData.VoxelMap);
-        foreach (var mod in chunk.NeighbourModifications)
+        for (int i = 0; i < chunk.NeighbourModifications.Length; i++)
         {
-            chunkData.NeighbourModifications.Add(mod);
+            chunkData.NeighbourModifications.Add(chunk.NeighbourModifications[i]);
         }
 
         using Stream stream = new FileStream(PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName), FileMode.Create, FileAccess.Write);
         await MemoryPackSerializer.SerializeAsync(stream, chunkData);
 
         _pool.Reclaim(chunkData);
+
     }
 
     /// <summary>
@@ -134,16 +137,18 @@ public class SaveSystem : MonoBehaviour
     }
 
 
-    public void DestroyForceSave()
+    public void OnDestroyForceSave()
     {
-        foreach (var chunk in ChunksToSave)
+        for (int i = 0; i < ChunksToSave.Count; i++)
         {
-            SaveChunk(chunk);
+            SaveChunk(ChunksToSave[i]);
         }
     }
 
     public void SaveChunk(Chunk chunk)
     {
+        if (chunk.IsDisposed) return;
+
         Directory.CreateDirectory(SaveChunkPath);
 
         ChunkData chunkData = new()
@@ -156,15 +161,13 @@ public class SaveSystem : MonoBehaviour
         };
 
         chunk.VoxelMap.CopyTo(chunkData.VoxelMap);
-        foreach (var mod in chunk.NeighbourModifications)
+        for (int i = 0; i < chunk.NeighbourModifications.Length; i++)
         {
-            chunkData.NeighbourModifications.Add(mod);
+            chunkData.NeighbourModifications.Add(chunk.NeighbourModifications[i]);
         }
 
         using Stream stream = new FileStream(PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName), FileMode.Create, FileAccess.Write);
         _ = MemoryPackSerializer.SerializeAsync(stream, chunkData);
-
-        _pool.Reclaim(chunkData);
     }
 }
 
@@ -184,7 +187,7 @@ public partial class ChunkData
 public class ChunkDataPool
 {
     private readonly World World;
-    private List<ChunkData> _datas;
+    private readonly List<ChunkData> _datas;
 
     public ChunkDataPool(World world)
     {
@@ -231,7 +234,7 @@ public static class ListExtras
     //    size: desired new size
     // element: default value to insert
 
-    public static void Resize<T>(this List<T> list, int size, T element = default(T))
+    public static void Resize<T>(this List<T> list, int size, T element = default)
     {
         int count = list.Count;
 
@@ -241,7 +244,7 @@ public static class ListExtras
         }
         else if (size > count)
         {
-            if (size > list.Capacity)   // Optimization
+            if (size > list.Capacity)
                 list.Capacity = size;
 
             list.AddRange(Enumerable.Repeat(element, size - count));

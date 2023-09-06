@@ -31,6 +31,16 @@ public class BlockTypesEditor : Editor
         GUILayout.Space(10);
         GUILayout.BeginHorizontal();
 
+        if (GUILayout.Button("Update Item Mesh"))
+        {
+            block.GenerateItemMesh();
+        }
+
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(10);
+        GUILayout.BeginHorizontal();
+
         AddTexturePreview("Back face", backface);
         GUILayout.Space(10);
         AddTexturePreview("Front face", frontface);

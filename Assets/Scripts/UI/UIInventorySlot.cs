@@ -45,23 +45,4 @@ public class UIInventorySlot : MonoBehaviour
         _image.enabled = false;
         _amount.text = "";
     }
-
-    //public void OnPointerEnter(PointerEventData eventData)
-    //{
-    //    string tooltipText = $"{_amount.text}\n{_name}".Trim();
-    //    if (tooltipText == string.Empty)
-    //        TooltipScreenSpaceUI.HideTooltip_Static();
-    //    else
-    //        TooltipScreenSpaceUI.ShowTooltip_Static(tooltipText);
-    //}
-
-    //public void OnPointerExit(PointerEventData eventData)
-    //{
-    //    //if (!eventData.fullyExited)
-    //    //    return;
-    //    //Debug.Log(eventData?.pointerCurrentRaycast.gameObject.GetInstanceID() == gameObject.GetInstanceID());
-    //    //if (eventData.pointerCurrentRaycast.gameObject.transform.IsChildOf(transform))
-    //    //    return;
-    //    TooltipScreenSpaceUI.HideTooltip_Static();
-    //}
 }

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public class PauseSystem : MonoBehaviour
 {
-    private World World;
+    private EventSystem _eventSystem;
     [SerializeField] private InputActionReference _pauseAction;
     [SerializeField] private GameObject _pauseScreen;
     [SerializeField] private Button _resumeButton;
@@ -17,7 +17,7 @@ public class PauseSystem : MonoBehaviour
 
     private void Awake()
     {
-        World = World.Instance;
+        _eventSystem = ServiceLocator.Get<EventSystem>();
         IsPaused = false;
 
         _resumeButton.onClick.AddListener(ResumeGame);
@@ -44,7 +44,7 @@ public class PauseSystem : MonoBehaviour
         Time.timeScale = 0;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        World.OnPause?.Invoke();
+        _eventSystem.PauseGame();
         _pauseScreen.SetActive(true);
     }
 
@@ -53,7 +53,7 @@ public class PauseSystem : MonoBehaviour
         Time.timeScale = 1;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        World.OnResume?.Invoke();
+        _eventSystem.ResumeGame();
         _pauseScreen.SetActive(false);
     }
 }

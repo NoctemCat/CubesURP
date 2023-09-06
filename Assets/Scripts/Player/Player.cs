@@ -13,6 +13,7 @@ public class Player : MonoBehaviour
 {
     public Transform LookFrom { get; private set; }
     private World World;
+    private EventSystem _eventSystem;
     private PlayerInventory _inventory;
 
     public bool isGrounded;
@@ -38,25 +39,24 @@ public class Player : MonoBehaviour
     public Vector3 Velocity => _velocity;
     private float verticalMomentum = 0f;
 
-    private float PX => transform.position.x;
-    private float PY => transform.position.y;
-    private float PZ => transform.position.z;
-
-    public bool Front => World.CheckForVoxel(new(PX, PY, PZ + playerWidth)) || World.CheckForVoxel(new(PX, PY + 1f, PZ + playerWidth));
-    public bool Back => World.CheckForVoxel(new(PX, PY, PZ - playerWidth)) || World.CheckForVoxel(new(PX, PY + 1f, PZ - playerWidth));
-    public bool Left => World.CheckForVoxel(new(PX - playerWidth, PY, PZ)) || World.CheckForVoxel(new(PX - playerWidth, PY + 1f, PZ));
-    public bool Right => World.CheckForVoxel(new(PX + playerWidth, PY, PZ)) || World.CheckForVoxel(new(PX + playerWidth, PY + 1f, PZ));
-
-    public bool FrontLeft => World.CheckForVoxel(new(PX - playerWidth, PY, PZ + playerWidth)) || World.CheckForVoxel(new(PX - playerWidth, PY + 1f, PZ + playerWidth));
-    public bool FrontRight => World.CheckForVoxel(new(PX + playerWidth, PY, PZ + playerWidth)) || World.CheckForVoxel(new(PX + playerWidth, PY + 1f, PZ + playerWidth));
-    public bool BackLeft => World.CheckForVoxel(new(PX - playerWidth, PY, PZ - playerWidth)) || World.CheckForVoxel(new(PX - playerWidth, PY + 1f, PZ - playerWidth));
-    public bool BackRight => World.CheckForVoxel(new(PX + playerWidth, PY, PZ - playerWidth)) || World.CheckForVoxel(new(PX + playerWidth, PY + 1f, PZ - playerWidth));
+    //private float PX => transform.position.x;
+    //private float PY => transform.position.y;
+    //private float PZ => transform.position.z;
+    private Transform _curTransform;
+    public bool Front { get; private set; }
+    public bool Back { get; private set; }
+    public bool Left { get; private set; }
+    public bool Right { get; private set; }
+    public bool FrontLeft { get; private set; }
+    public bool FrontRight { get; private set; }
+    public bool BackLeft { get; private set; }
+    public bool BackRight { get; private set; }
 
     public Transform highlightBlock;
     public Transform placeBlock;
     public float reach = 8f;
 
-    public int selectedBlockIndex;
+    public int selectedBlockIndex = -1;
     public bool isJumping;
 
 #pragma warning disable IDE0051
@@ -88,7 +88,7 @@ public class Player : MonoBehaviour
         {
             World.PlaceBlock(highlightBlock.position, 0);
 
-            GroundItemsPool.DropItems(
+            _eventSystem.DropItems(
                 highlightBlock.position + new Vector3(0.5f, 0.5f, 0.5f),
                 new(UnityEngine.Random.value * 0.05f, UnityEngine.Random.value * 0.1f, UnityEngine.Random.value * 0.05f),
                 blockObject, 1
@@ -119,7 +119,7 @@ public class Player : MonoBehaviour
         if (xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock) return;
 
         Block selBlock = (Block)selectedBlockIndex;
-        BlockObject selObj = World.BlocksScObj.Blocks[selBlock];
+        BlockObject selObj = World.Blocks[(int)selBlock];
 
         if (_inventory.RemoveItem(new Item(selObj), 1))
         {
@@ -141,7 +141,9 @@ public class Player : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
+        _curTransform = transform;
         //camera = GameObject.Find("Main Camera").transform;
+        _eventSystem = ServiceLocator.Get<EventSystem>();
         LookFrom = transform.GetChild(1);
 
         World = World.Instance;
@@ -153,11 +155,7 @@ public class Player : MonoBehaviour
 
         await UniTask.WaitForSeconds(0.5f);
         gameObject.SetActive(true);
-        //var blok = CubesUtils.GetIntersectedWorldBlocksD(new(0f, 0f, 0f), new(0, 5f, 4f));
-        //foreach (var b in blok)
-        //{
-        //    Debug.Log(b);
-        //}
+
     }
 
     private void OnDestroy()
@@ -166,6 +164,7 @@ public class Player : MonoBehaviour
 
     private void FixedUpdate()
     {
+        UpdateDirections(_curTransform.position);
         CalculateVelocity();
         transform.Translate(_velocity, Space.World);
     }
@@ -192,6 +191,27 @@ public class Player : MonoBehaviour
             placeBlock.gameObject.SetActive(false);
         }
         //frustumPlanes[0].GetSide
+    }
+
+    //public bool Check(Vector3 pos)
+    //{
+    //    Dictionary<Vector3Int, bool> results = new();
+
+    //    int x = Mathf.FloorToInt(pos.x);
+    //    int y = Mathf.FloorToInt(pos.y);
+    //    int z = Mathf.FloorToInt(pos.z);
+    //}
+
+    public void UpdateDirections(Vector3 pos)
+    {
+        Front = World.CheckForVoxel(new(pos.x, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z + playerWidth));
+        Back = World.CheckForVoxel(new(pos.x, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z - playerWidth));
+        Left = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z));
+        Right = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z));
+        FrontLeft = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z + playerWidth));
+        FrontRight = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z + playerWidth));
+        BackLeft = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z - playerWidth));
+        BackRight = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z - playerWidth));
     }
 
     private void CalculateVelocity()
@@ -252,11 +272,12 @@ public class Player : MonoBehaviour
 
     private float CheckDownSpeed(float downSpeed)
     {
+        Vector3 pos = _curTransform.position;
         if (
-            (World.CheckForVoxel(new(PX - playerWidth, PY + downSpeed, PZ - playerWidth)) && !BackLeft) ||
-            (World.CheckForVoxel(new(PX + playerWidth, PY + downSpeed, PZ - playerWidth)) && !BackRight) ||
-            (World.CheckForVoxel(new(PX + playerWidth, PY + downSpeed, PZ + playerWidth)) && !FrontRight) ||
-            (World.CheckForVoxel(new(PX - playerWidth, PY + downSpeed, PZ + playerWidth)) && !FrontLeft)
+            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackLeft) ||
+            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackRight) ||
+            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontRight) ||
+            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontLeft)
         )
         {
             isGrounded = true;
@@ -272,12 +293,12 @@ public class Player : MonoBehaviour
 
     private float CheckUpSpeed(float upSpeed)
     {
-
+        Vector3 pos = _curTransform.position;
         if (
-            (World.CheckForVoxel(new(PX - playerWidth, PY + 1.8f + upSpeed, PZ - playerWidth)) && !BackLeft) ||
-            (World.CheckForVoxel(new(PX + playerWidth, PY + 1.8f + upSpeed, PZ - playerWidth)) && !BackRight) ||
-            (World.CheckForVoxel(new(PX + playerWidth, PY + 1.8f + upSpeed, PZ + playerWidth)) && !FrontRight) ||
-            (World.CheckForVoxel(new(PX - playerWidth, PY + 1.8f + upSpeed, PZ + playerWidth)) && !FrontLeft)
+            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackLeft) ||
+            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackRight) ||
+            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontRight) ||
+            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontLeft)
         )
         {
             verticalMomentum = 0;
@@ -299,11 +320,11 @@ public class Player : MonoBehaviour
             return;
         }
 
-        //if (other.TryGetComponent(out BlockPhysics physics))
-        //{
-        //    Vector3 dir = (physics.transform.position - transform.position).normalized;
-        //    physics.AddVelocity(dir * Time.deltaTime);
-        //}
+        if (other.TryGetComponent(out BlockPhysics physics))
+        {
+            Vector3 dir = (physics.transform.position - transform.position).normalized;
+            physics.AddVelocity(dir * Time.deltaTime);
+        }
     }
 
     public void OnTriggerEnter(Collider other)

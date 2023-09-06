@@ -42,17 +42,17 @@ public class DebugScreen : MonoBehaviour
     {
         if (debugPanel.gameObject.activeSelf)
         {
-            var pPos = World.PlayerObj.transform.position;
+            //var pPos = World.PlayerObj.transform.position;
 
-            StringBuilder debug = new(256);
-            debug.AppendLine($"Debug Screen");
-            debug.AppendLine($"World Name: {World.WorldData.WorldName}");
-            debug.AppendLine($"World Seed: {World.WorldData.Seed}");
-            debug.AppendLine($"FPS: {frameRate}");
-            debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
-            debug.AppendLine($"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
+            //StringBuilder debug = new(256);
+            //debug.AppendLine($"Debug Screen");
+            //debug.AppendLine($"World Name: {World.WorldData.WorldName}");
+            //debug.AppendLine($"World Seed: {World.WorldData.Seed}");
+            //debug.AppendLine($"FPS: {frameRate}");
+            //debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
+            //debug.AppendLine($"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
 
-            debugText.text = debug.ToString();
+            //debugText.text = debug.ToString();
         }
 
         if (timer > 1f)

@@ -9,14 +9,14 @@ using UnityEngine.InputSystem;
 public class PlayerInventory : MonoBehaviour
 {
     private World World;
+    private EventSystem _eventSystem;
     private Player _player;
-    public InventoryObject ToolbarObj;
-    public InventoryObject InventoryObj;
+    private InventoryObject _toolbar;
+    private InventoryObject _inventory;
     public InventoryObject EquipmentObj;
 
     [SerializeField] private GameObject _inventoryScreen;
     [SerializeField] private GameObject _itemPrefab;
-
     [SerializeField] private InputActionReference _dropItemAction;
 
     //private void Update()
@@ -35,44 +35,9 @@ public class PlayerInventory : MonoBehaviour
     //        EquipmentObj.Load();
     //    }
     //}
-    private void Update()
-    {
-        //if (_dropItemAction.action.IsPressed())
-        //{
-        //    if (_player.selectedBlockIndex <= 0) return;
-
-        //    Block selBlock = (Block)_player.selectedBlockIndex;
-        //    BlockObject selObj = World.BlocksScObj.Blocks[selBlock];
-
-        //    //if (RemoveItem(new Item(selObj), 1))
-        //    //{
-        //    //}
-        //    GroundItemsPool.DropItems(
-        //        _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
-        //        _player.GetDropItemVelocity(),
-        //        selObj, 1
-        //    );
-        //}
-    }
-
-    //private readonly Collider[] _colliders = new Collider[10];
-    //private void FixedUpdate()
-    //{
-    //    LayerMask mask = LayerMask.GetMask("GroundItems");
-    //    int nums = Physics.OverlapSphereNonAlloc(transform.position, 0.5f, _colliders, mask);
-    //    for (int i = 0; i < nums; i++)
-    //    {
-    //        if (gameObject == _colliders[i].gameObject) continue;
-
-    //        if (_colliders[i].gameObject.TryGetComponent(out GroundItem other) && Time.time - other.CreateTime > 0.5f)
-    //        {
-    //            AddItem(other.ItemObj.Data, other.Amount);
-    //            _colliders[i].gameObject.SetActive(false);
-    //        }
-    //    }
-    //}
 
     public bool InInventory { get; private set; }
+    private TooltipUi _tooltip;
 
     [Range(0.1f, 2f)]
     [SerializeField] private float _dropItemDelay;
@@ -80,9 +45,29 @@ public class PlayerInventory : MonoBehaviour
     {
         World = World.Instance;
         _player = GetComponent<Player>();
+        _eventSystem = ServiceLocator.Get<EventSystem>();
+
+        //InventorySystem.
+        _tooltip = ServiceLocator.Get<TooltipUi>();
+        var inventorySystem = ServiceLocator.Get<InventorySystem>();
+
+        _toolbar = new InventoryObject(9, "Toolbar");
+        _inventory = new InventoryObject(24, "Player Inventory");
+
+        inventorySystem.RegisterInventory(_toolbar);
+        inventorySystem.RegisterInventory(_inventory);
+
+        inventorySystem.Show(_toolbar);
+
+        //ToolbarObj = inventorySystem.Get("Toolbar");
+        //InventoryObj = inventorySystem.Get("Player Inventory");
+
+        //inventorySystem.Show(ToolbarObj);
+
         InInventory = false;
 
-        World.OnResume += SetCursorState;
+        var eventSystem = ServiceLocator.Get<EventSystem>();
+        eventSystem.OnResumeGame += SetCursorState;
 
         DropItemDelay = new(DropItem, _dropItemDelay);
     }
@@ -101,10 +86,14 @@ public class PlayerInventory : MonoBehaviour
 
         InInventory = !InInventory;
 
-        _inventoryScreen.SetActive(InInventory);
+        var inventorySystem = ServiceLocator.Get<InventorySystem>();
+
+        if (InInventory) inventorySystem.Show(_inventory);
+        else inventorySystem.Hide(_inventory);
+
         if (!InInventory)
         {
-            TooltipScreenSpaceUI.HideTooltip_Static();
+            _tooltip.HideTooltip();
         }
         SetCursorState();
     }
@@ -122,12 +111,12 @@ public class PlayerInventory : MonoBehaviour
     private void DropItem()
     {
         if (_player.selectedBlockIndex <= 0) return;
-        Block selBlock = (Block)_player.selectedBlockIndex;
-        BlockObject selObj = World.BlocksScObj.Blocks[selBlock];
+
+        BlockObject selObj = World.Blocks[_player.selectedBlockIndex];
         //if (RemoveItem(new Item(selObj), 1))
         //{
         //}
-        GroundItemsPool.DropItems(
+        _eventSystem.DropItems(
             _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
             _player.GetDropItemVelocity(),
             selObj, 1
@@ -149,35 +138,23 @@ public class PlayerInventory : MonoBehaviour
         }
     }
 
-    public void OnTriggerEnter(Collider other)
-    {
-        //var item = other.GetComponent<GroundItem>();
-        //if (item)
-        //{
-        //    if (InventoryObj.AddItem(new Item(item.ItemObj), 1))
-        //    {
-        //        Destroy(other.gameObject);
-        //    }
-        //}
-    }
-
     public void AddItem(Item item, int amount)
     {
-        if (!ToolbarObj.AddItem(item, amount))
+        if (!_toolbar.AddItem(item, amount))
         {
-            InventoryObj.AddItem(item, amount);
+            _inventory.AddItem(item, amount);
         }
     }
     public bool RemoveItem(Item item, int amount)
     {
-        return ToolbarObj.RemoveItem(item, amount);
+        return _toolbar.RemoveItem(item, amount);
     }
 
     private void OnApplicationQuit()
     {
-        ToolbarObj.Clear();
-        InventoryObj.Container.Clear();
-        EquipmentObj.Container.Clear();
+        //ToolbarObj.Clear();
+        //InventoryObj.Container.Clear();
+        //EquipmentObj.Container.Clear();
     }
 }
 

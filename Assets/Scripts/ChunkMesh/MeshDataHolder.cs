@@ -75,7 +75,7 @@ public struct MeshDataHolder
 
         MeshBuilder.CountBlockTypesJob countBlockTypes = new()
         {
-            Blocks = World.Blocks,
+            Blocks = World.NativeBlocks,
             VoxelMap = voxelMap,
             Counters = Counters,
         };
@@ -116,7 +116,7 @@ public struct MeshDataHolder
             ChunkNeighbours = neighbours,
             ChunkPos = ChunkPos,
             VoxelMap = voxelMap,
-            Blocks = World.Blocks,
+            Blocks = World.NativeBlocks,
             XYZMap = World.XYZMap,
 
             SolidFaces = FacesData.SolidFaces.AsParallelWriter(),

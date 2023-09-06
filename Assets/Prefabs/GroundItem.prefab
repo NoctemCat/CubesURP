@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3931324662457264825}
   - component: {fileID: 3186156051721269440}
   m_Layer: 6
-  m_Name: Shove
+  m_Name: GroundItem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

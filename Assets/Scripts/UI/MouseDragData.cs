@@ -12,11 +12,11 @@ using UnityEngine.UI;
 
 public class MouseDragData : MonoBehaviour
 {
+    private EventSystem _eventSystem;
     private UIInventorySlot _uiInventorySlot;
 
-    public InventorySlot OriginalSlot { get; private set; }
-    public InventorySlot Slot { get; private set; }
-    public InventorySlot HoverSlot { get; private set; }
+    [field: NonSerialized] public InventorySlot Slot { get; private set; }
+    [field: NonSerialized] public InventorySlot HoverSlot { get; private set; }
 
     private RectTransform _rect;
     public bool HasItem => Slot.Item is not null && Slot.Item.Id >= 0;
@@ -26,8 +26,14 @@ public class MouseDragData : MonoBehaviour
     [SerializeField] private InputActionReference _leftMouse;
     [SerializeField] private InputActionReference _rightMouse;
 
+    private void Awake()
+    {
+        ServiceLocator.Register(this);
+    }
+
     private void Start()
     {
+        _eventSystem = ServiceLocator.Get<EventSystem>();
         Slot = new();
 
         _rect = GetComponent<RectTransform>();
@@ -40,12 +46,14 @@ public class MouseDragData : MonoBehaviour
         _leftMouse.action.performed += DropAllItemsCallback;
         _rightMouse.action.performed += DropOneItemCallback;
     }
+
     private void OnDestroy()
     {
         _leftMouse.action.performed -= DropAllItemsCallback;
         _rightMouse.action.performed -= DropOneItemCallback;
-    }
 
+        ServiceLocator.Unregister(this);
+    }
 
     private void SlotUpdate(InventorySlot slot)
     {
@@ -71,7 +79,7 @@ public class MouseDragData : MonoBehaviour
         if (!HasItem || OverInterface) return;
         Slot.AddAmount(-1);
 
-        GroundItemsPool.DropItems(
+        _eventSystem.DropItems(
             _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
             _player.GetDropItemVelocity(),
             Slot.ItemObject, 1
@@ -83,7 +91,7 @@ public class MouseDragData : MonoBehaviour
     {
         if (!HasItem || OverInterface) return;
 
-        GroundItemsPool.DropItems(
+        _eventSystem.DropItems(
             _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
             _player.GetDropItemVelocity(),
             Slot.ItemObject, Slot.Amount
@@ -99,13 +107,13 @@ public class MouseDragData : MonoBehaviour
 
     public void SwapMerge(InventorySlot slot1, InventorySlot slot2)
     {
-        if (!(slot2.Item.Equals(slot1.Item) && slot2.ItemObject.Stackable))
+        if (slot2.HasItem && slot2.Item.Equals(slot1.Item) && slot2.ItemObject.Stackable)
         {
-            InventoryObject.SwapItems(slot1, slot2);
+            InventoryObject.MergeItems(slot1, slot2);
         }
         else
         {
-            InventoryObject.MergeItems(slot1, slot2);
+            InventoryObject.SwapItems(slot1, slot2);
         }
     }
 

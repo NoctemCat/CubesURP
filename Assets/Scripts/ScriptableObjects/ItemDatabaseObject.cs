@@ -6,19 +6,6 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Item Database", menuName = "Inventory System/Items/Database")]
 public class ItemDatabaseObject : ScriptableObject, ISerializationCallbackReceiver
 {
-    private static ItemDatabaseObject _instance;
-    public static ItemDatabaseObject Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                _instance = Resources.Load<ItemDatabaseObject>("Data/Database");
-            }
-            return _instance;
-        }
-    }
-
     public ItemObject[] ItemObjects;
 
     [ContextMenu("Update IDs")]

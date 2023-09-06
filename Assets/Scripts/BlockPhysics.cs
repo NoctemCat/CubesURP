@@ -25,10 +25,19 @@ public class BlockPhysics : MonoBehaviour
 
     public bool ApplyGravity;
 
+    private Transform _curTansform;
+
     private void Start()
     {
         World = World.Instance;
+        _curTansform = transform;
         Reset();
+    }
+
+    private void OnDisable()
+    {
+        _velocity = Vector3.zero;
+        _verticalMomentum = 0f;
     }
 
     public void Reset()
@@ -36,14 +45,14 @@ public class BlockPhysics : MonoBehaviour
         _width = transform.localScale.x / 2f;
         _height = transform.localScale.y / 2f;
         _length = transform.localScale.z / 2f;
-
         _velocity = Vector3.zero;
         _verticalMomentum = 0f;
     }
 
     private void FixedUpdate()
     {
-        Vector3 pos = transform.position;
+        //_curTansform.GetPositionAndRotation()
+        Vector3 pos = _curTansform.position;
         UpdateDirections(pos);
         CalculateVelocity(pos);
         transform.Translate(_velocity, Space.World);
@@ -84,6 +93,12 @@ public class BlockPhysics : MonoBehaviour
     public void AddVelocity(Vector3 velocity)
     {
         _velocity += velocity;
+    }
+
+    public void SetVelocity(Vector3 velocity)
+    {
+        _velocity = velocity;
+        _verticalMomentum = 0f;
     }
 
     private float CheckDownSpeed(Vector3 pos, float downSpeed)

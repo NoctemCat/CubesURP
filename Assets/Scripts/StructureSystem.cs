@@ -70,21 +70,20 @@ public class StructureSystem : MonoBehaviour
 
     public void AddSortedStructures()
     {
-        foreach (Vector3Int key in _sortedStructures.Keys)
+        foreach (var kvp in _sortedStructures)
         {
-            if (_sortedStructures[key].Count < 0) continue;
-
+            if (kvp.Value.Count < 0) continue;
             Chunk chunk;
-            if (World.Chunks.ContainsKey(key))
+            if (World.Chunks.ContainsKey(kvp.Key))
             {
-                chunk = World.Chunks[key];
+                chunk = World.Chunks[kvp.Key];
             }
             else
             {
-                chunk = new(key);
-                World.Chunks[key] = chunk;
+                chunk = new(kvp.Key);
+                World.Chunks[kvp.Key] = chunk;
             }
-            chunk.AddRangeModification(_sortedStructures[key]).Forget();
+            chunk.AddRangeModification(kvp.Value).Forget();
         }
     }
 }
