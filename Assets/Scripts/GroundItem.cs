@@ -45,7 +45,7 @@ public class GroundItem : MonoBehaviour
         {
             if (gameObject == _colliders[i].gameObject) continue;
 
-            if (_colliders[i].gameObject.TryGetComponent(out GroundItem other) && Time.time - other.CreateTime > 0.2f && ItemObj.Data.Id == other.ItemObj.Data.Id)
+            if (_colliders[i].gameObject.TryGetComponent(out GroundItem other) && Time.time - other.CreateTime > 0.2f && ItemObj.data.id == other.ItemObj.data.id)
             {
                 Amount += other.Amount;
                 _colliders[i].gameObject.SetActive(false);

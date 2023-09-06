@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Plank
   m_EditorClassIdentifier: 
-  Name: Plank
-  UIDisplay: {fileID: -1113681029, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: 9
-    Buffs: []
-  BlockType: 8
-  IsSolid: 1
-  IsTransparent: 0
-  BackfaceTexture: 4
-  FrontfaceTexture: 4
-  TopfaceTexture: 4
-  BottomfaceTexture: 4
-  LeftfaceTexture: 4
-  RightfaceTexture: 4
+  itemName: Plank
+  uiDisplay: {fileID: -1113681029, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: -1
+    buffs: []
+  blockType: 8
+  isSolid: 1
+  isTransparent: 0
+  backfaceTexture: 4
+  frontfaceTexture: 4
+  topfaceTexture: 4
+  bottomfaceTexture: 4
+  leftfaceTexture: 4
+  rightfaceTexture: 4

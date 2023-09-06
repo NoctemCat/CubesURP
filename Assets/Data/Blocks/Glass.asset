@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Glass
   m_EditorClassIdentifier: 
-  Name: Glass
-  UIDisplay: {fileID: -1126025829, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: 5
-    Buffs: []
-  BlockType: 10
-  IsSolid: 1
-  IsTransparent: 1
-  BackfaceTexture: 3
-  FrontfaceTexture: 3
-  TopfaceTexture: 3
-  BottomfaceTexture: 3
-  LeftfaceTexture: 3
-  RightfaceTexture: 3
+  itemName: Glass
+  uiDisplay: {fileID: -1126025829, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: 6
+    buffs: []
+  blockType: 10
+  isSolid: 1
+  isTransparent: 1
+  backfaceTexture: 3
+  frontfaceTexture: 3
+  topfaceTexture: 3
+  bottomfaceTexture: 3
+  leftfaceTexture: 3
+  rightfaceTexture: 3

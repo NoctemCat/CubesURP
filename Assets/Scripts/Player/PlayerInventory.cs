@@ -22,23 +22,6 @@ public class PlayerInventory : MonoBehaviour
     [SerializeField] private GameObject _itemPrefab;
     [SerializeField] private InputActionReference _dropItemAction;
 
-    //private void Update()
-    //{
-
-    //    if (Input.GetKeyDown(KeyCode.LeftAlt))
-    //    {
-    //        ToolbarObj.Save();
-    //        InventoryObj.Save();
-    //        EquipmentObj.Save();
-    //    }
-    //    if (Input.GetKeyDown(KeyCode.Tab))
-    //    {
-    //        ToolbarObj.Load();
-    //        InventoryObj.Load();
-    //        EquipmentObj.Load();
-    //    }
-    //}
-
     public bool InInventory { get; private set; }
     private TooltipUi _tooltip;
 
@@ -85,10 +68,10 @@ public class PlayerInventory : MonoBehaviour
         var items = ServiceLocator.Get<ItemDatabaseObject>();
 
         var itemsList = items.ItemObjects.ToList();
-        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.BlockType == Block.Invalid);
+        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.blockType == Block.Invalid);
         for (Block i = 0; i < Block.Invalid; i++)
         {
-            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.BlockType == i);
+            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.blockType == i);
             if (itemI != -1)
             {
                 _creativeInventory.AddItem(new(itemsList[itemI]), 99);

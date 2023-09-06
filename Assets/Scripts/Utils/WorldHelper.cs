@@ -14,10 +14,10 @@ public static class WorldHelper
         BlockObject[] blocks = new BlockObject[(int)Block.Invalid];
 
         var itemsList = items.ItemObjects.ToList();
-        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.BlockType == Block.Invalid);
+        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.blockType == Block.Invalid);
         for (Block i = 0; i < Block.Invalid; i++)
         {
-            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.BlockType == i);
+            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.blockType == i);
             if (itemI != -1)
             {
                 blocks[(int)i] = (BlockObject)itemsList[itemI];

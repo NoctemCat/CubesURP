@@ -67,10 +67,10 @@ public abstract class UserInterface : MonoBehaviour
     private void OnSlotUpdate(InventorySlot slot)
     {
         UIInventorySlot uiSlot = slot.SlotDisplay.GetComponent<UIInventorySlot>();
-        if (slot.Item.Id < 0)
+        if (slot.Item.id < 0)
             uiSlot.Disable();
         else
-            uiSlot.Set(slot.ItemObject.UIDisplay, slot.Amount.ToString("n0"), slot.Item.Name);
+            uiSlot.Set(slot.ItemObject.uiDisplay, slot.Amount.ToString("n0"), slot.Item.itemName);
     }
 
     private void OnBeforeUpdate(InventorySlot slot)
@@ -105,13 +105,13 @@ public abstract class UserInterface : MonoBehaviour
 
         InventorySlot item = slotsOnInterface[obj];
 
-        if (item.Item.Id < 0)
+        if (item.Item.id < 0)
         {
             _tooltip.HideTooltip();
         }
         else
         {
-            string tooltipText = $"{item.Item.Name}\n{item.Amount}".Trim();
+            string tooltipText = $"{item.Item.itemName}\n{item.Amount}".Trim();
             _tooltip.ShowTooltip(tooltipText);
         }
     }

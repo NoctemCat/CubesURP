@@ -8,6 +8,6 @@ public class FoodObject : ItemObject
     public int restoreHealthValue;
     private void Reset()
     {
-        Type = ItemType.Food;
+        type = ItemType.Food;
     }
 }

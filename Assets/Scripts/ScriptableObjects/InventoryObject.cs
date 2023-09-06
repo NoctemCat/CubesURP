@@ -32,7 +32,7 @@ public class InventoryObject
     public bool AddItem(Item item, int amount)
     {
         InventorySlot slot = FindItemOnInventory(item);
-        if (!_database.ItemObjects[item.Id].Stackable || slot == null)
+        if (!_database.ItemObjects[item.id].stackable || slot == null)
         {
             if (EmptySlotCount <= 0)
                 return false;
@@ -62,7 +62,7 @@ public class InventoryObject
     {
         for (int i = 0; i < Slots.Length; i++)
         {
-            if (Slots[i].Item.Id == item.Id)
+            if (Slots[i].Item.id == item.id)
                 return Slots[i];
         }
         return null;
@@ -75,7 +75,7 @@ public class InventoryObject
             int counter = 0;
             for (int i = 0; i < Slots.Length; i++)
             {
-                if (Slots[i].Item.Id <= -1)
+                if (Slots[i].Item.id <= -1)
                     counter++;
             }
             return counter;
@@ -86,7 +86,7 @@ public class InventoryObject
     {
         for (int i = 0; i < Slots.Length; i++)
         {
-            if (Slots[i].Item.Id <= -1)
+            if (Slots[i].Item.id <= -1)
             {
                 Slots[i].UpdateSlot(item, amount);
                 return Slots[i];
@@ -214,8 +214,8 @@ public class InventorySlot
     public Item Item;
     public int Amount;
 
-    public bool HasItem => Item.Id >= 0;
-    public ItemObject ItemObject => HasItem ? _database.ItemObjects[Item.Id] : null;
+    public bool HasItem => Item.id >= 0;
+    public ItemObject ItemObject => HasItem ? _database.ItemObjects[Item.id] : null;
 
     public InventorySlot()
     {
@@ -242,12 +242,12 @@ public class InventorySlot
 
     public bool CanPlaceInSlot(ItemObject itemObj)
     {
-        if (AllowedItems.Length <= 0 || itemObj == null || itemObj.Data.Id < 0)
+        if (AllowedItems.Length <= 0 || itemObj == null || itemObj.data.id < 0)
             return true;
 
         for (int i = 0; i < AllowedItems.Length; i++)
         {
-            if (itemObj.Type == AllowedItems[i])
+            if (itemObj.type == AllowedItems[i])
                 return true;
         }
         return false;

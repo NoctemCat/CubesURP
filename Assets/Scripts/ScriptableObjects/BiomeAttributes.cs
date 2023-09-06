@@ -9,24 +9,24 @@ using UnityEngine;
 public class BiomeAttributes : ScriptableObject
 {
     [Header("Biome Settings")]
-    public string BiomeName;
-    public int Offset;
-    public float Scale;
+    public string biomeName;
+    public int offset;
+    public float scale;
 
-    public int TerrainHeight;
-    public float TerrainScale;
+    public int terrainHeight;
+    public float terrainScale;
 
-    public Block SurfaceBlock;
-    public Block SubsurfaceBlock;
+    public Block surfaceBlock;
+    public Block subsurfaceBlock;
 
     [Header("Major Flora")]
-    public StructureType FloraType;
-    public float FloraZoneScale = 1.3f;
+    public StructureType floraType;
+    public float floraZoneScale = 1.3f;
     [Range(0.1f, 1f)]
-    public float FloraZoneThreshold = 0.6f;
-    public float FloraPlacementScale = 15f;
+    public float floraZoneThreshold = 0.6f;
+    public float floraPlacementScale = 15f;
     [Range(0.1f, 1f)]
-    public float FloraPlacementThreshold = 0.8f;
+    public float floraPlacementThreshold = 0.8f;
 
     public int maxHeight = 12;
     public int minHeight = 5;
@@ -48,70 +48,70 @@ public class Lode
 
 public readonly struct BiomeStruct
 {
-    readonly public int Offset;
-    readonly public float Scale;
-    readonly public int TerrainHeight;
-    readonly public float TerrainScale;
+    readonly public int offset;
+    readonly public float scale;
+    readonly public int terrainHeight;
+    readonly public float terrainScale;
 
-    readonly public Block SurfaceBlock;
-    readonly public Block SubsurfaceBlock;
+    readonly public Block surfaceBlock;
+    readonly public Block subsurfaceBlock;
 
-    readonly public StructureType FloraType;
-    readonly public float FloraZoneScale;
-    readonly public float FloraZoneThreshold;
-    readonly public float FloraPlacementScale;
-    readonly public float FloraPlacementThreshold;
+    readonly public StructureType floraType;
+    readonly public float floraZoneScale;
+    readonly public float floraZoneThreshold;
+    readonly public float floraPlacementScale;
+    readonly public float floraPlacementThreshold;
 
-    readonly public int MaxHeight;
-    readonly public int MinHeight;
+    readonly public int maxHeight;
+    readonly public int minHeight;
 
-    readonly public UnsafeList<LodeSctruct> Lodes;
+    readonly public UnsafeList<LodeSctruct> lodes;
 
     public BiomeStruct(BiomeAttributes biome)
     {
-        Offset = biome.Offset;
-        Scale = biome.Scale;
-        TerrainHeight = biome.TerrainHeight;
-        TerrainScale = biome.TerrainScale;
-        SurfaceBlock = biome.SurfaceBlock;
-        SubsurfaceBlock = biome.SubsurfaceBlock;
-        FloraType = biome.FloraType;
-        FloraZoneScale = biome.FloraZoneScale;
-        FloraZoneThreshold = biome.FloraZoneThreshold;
-        FloraPlacementScale = biome.FloraPlacementScale;
-        FloraPlacementThreshold = biome.FloraPlacementThreshold;
-        MaxHeight = biome.maxHeight;
-        MinHeight = biome.minHeight;
+        offset = biome.offset;
+        scale = biome.scale;
+        terrainHeight = biome.terrainHeight;
+        terrainScale = biome.terrainScale;
+        surfaceBlock = biome.surfaceBlock;
+        subsurfaceBlock = biome.subsurfaceBlock;
+        floraType = biome.floraType;
+        floraZoneScale = biome.floraZoneScale;
+        floraZoneThreshold = biome.floraZoneThreshold;
+        floraPlacementScale = biome.floraPlacementScale;
+        floraPlacementThreshold = biome.floraPlacementThreshold;
+        maxHeight = biome.maxHeight;
+        minHeight = biome.minHeight;
 
-        Lodes = new(biome.lodes.Length, Allocator.Persistent);
+        lodes = new(biome.lodes.Length, Allocator.Persistent);
         for (int i = 0; i < biome.lodes.Length; i++)
         {
-            Lodes.Add(new(biome.lodes[i]));
+            lodes.Add(new(biome.lodes[i]));
         }
     }
 
     public readonly void Dispose(JobHandle inputDeps = default)
     {
-        Lodes.Dispose(inputDeps);
+        lodes.Dispose(inputDeps);
     }
 }
 
 public struct LodeSctruct
 {
-    public Block BlockID;
-    public int MinHeight;
-    public int MaxHeight;
-    public float Scale;
-    public float Threshold;
-    public float NoiseOffset;
+    public Block blockID;
+    public int minHeight;
+    public int maxHeight;
+    public float scale;
+    public float threshold;
+    public float noiseOffset;
 
     public LodeSctruct(Lode lode)
     {
-        BlockID = lode.blockID;
-        MinHeight = lode.minHeight;
-        MaxHeight = lode.maxHeight;
-        Scale = lode.scale;
-        Threshold = lode.threshold;
-        NoiseOffset = lode.noiseOffset;
+        blockID = lode.blockID;
+        minHeight = lode.minHeight;
+        maxHeight = lode.maxHeight;
+        scale = lode.scale;
+        threshold = lode.threshold;
+        noiseOffset = lode.noiseOffset;
     }
 }

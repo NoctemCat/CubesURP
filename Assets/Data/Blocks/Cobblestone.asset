@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Cobblestone
   m_EditorClassIdentifier: 
-  Name: Cobblestone
-  UIDisplay: {fileID: -1904621992, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: 3
-    Buffs: []
-  BlockType: 3
-  IsSolid: 1
-  IsTransparent: 0
-  BackfaceTexture: 8
-  FrontfaceTexture: 8
-  TopfaceTexture: 8
-  BottomfaceTexture: 8
-  LeftfaceTexture: 8
-  RightfaceTexture: 8
+  itemName: Cobblestone
+  uiDisplay: {fileID: -1904621992, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: 4
+    buffs: []
+  blockType: 3
+  isSolid: 1
+  isTransparent: 0
+  backfaceTexture: 8
+  frontfaceTexture: 8
+  topfaceTexture: 8
+  bottomfaceTexture: 8
+  leftfaceTexture: 8
+  rightfaceTexture: 8

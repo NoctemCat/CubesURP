@@ -26,13 +26,13 @@ public enum Attributes
 [Serializable]
 public abstract class ItemObject : ScriptableObject
 {
-    public string Name;
-    public Sprite UIDisplay;
-    public bool Stackable;
-    public ItemType Type;
+    public string itemName;
+    public Sprite uiDisplay;
+    public bool stackable;
+    public ItemType type;
     [TextArea(15, 20)]
-    public string Decription;
-    public Item Data = new();
+    public string decription;
+    public Item data = new();
     public Item CreateItem()
     {
         Item item = new(this);
@@ -45,53 +45,53 @@ public abstract class ItemObject : ScriptableObject
 [Serializable]
 public class Item
 {
-    public string Name;
-    public int Id = -1;
-    public ItemBuff[] Buffs;
+    public string itemName;
+    public int id = -1;
+    public ItemBuff[] buffs;
     public Item()
     {
-        Name = "";
-        Id = -1;
-        Buffs = new ItemBuff[0];
+        itemName = "";
+        id = -1;
+        buffs = new ItemBuff[0];
     }
     public Item(ItemObject item)
     {
-        Name = item.Name;
-        Id = item.Data.Id;
-        Buffs = new ItemBuff[item.Data.Buffs.Length];
+        itemName = item.itemName;
+        id = item.data.id;
+        buffs = new ItemBuff[item.data.buffs.Length];
 
-        for (int i = 0; i < item.Data.Buffs.Length; i++)
+        for (int i = 0; i < item.data.buffs.Length; i++)
         {
-            Buffs[i] = new(item.Data.Buffs[i].Min, item.Data.Buffs[i].Max)
+            buffs[i] = new(item.data.buffs[i].min, item.data.buffs[i].max)
             {
-                Attribute = item.Data.Buffs[i].Attribute
+                attribute = item.data.buffs[i].attribute
             };
-            Buffs[i].GenerateValue();
+            buffs[i].GenerateValue();
         }
     }
 
     public bool Equals(Item other)
     {
-        return Id == other.Id && Enumerable.SequenceEqual(Buffs, other.Buffs);
+        return id == other.id && Enumerable.SequenceEqual(buffs, other.buffs);
     }
 }
 
 [Serializable]
 public class ItemBuff
 {
-    public Attribute Attribute;
-    public int Value;
-    public int Min;
-    public int Max;
+    public Attribute attribute;
+    public int value;
+    public int min;
+    public int max;
 
     public ItemBuff(int _min, int _max)
     {
-        Min = _min;
-        Max = _max;
+        min = _min;
+        max = _max;
     }
 
     public void GenerateValue()
     {
-        Value = UnityEngine.Random.Range(Min, Max);
+        value = UnityEngine.Random.Range(min, max);
     }
 }

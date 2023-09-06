@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e620a09b054cdcc488d4e3cb5ff1c63b, type: 3}
   m_Name: Forest
   m_EditorClassIdentifier: 
-  BiomeName: Grasslands
-  Offset: 87544
-  Scale: 0.17
-  TerrainHeight: 80
-  TerrainScale: 0.6
-  SurfaceBlock: 5
-  SubsurfaceBlock: 4
-  FloraType: 0
-  FloraZoneScale: 60
-  FloraZoneThreshold: 0.309
-  FloraPlacementScale: 60
-  FloraPlacementThreshold: 0.553
+  biomeName: Forest
+  offset: 87544
+  scale: 0.17
+  terrainHeight: 80
+  terrainScale: 0.6
+  surfaceBlock: 5
+  subsurfaceBlock: 4
+  floraType: 0
+  floraZoneScale: 60
+  floraZoneThreshold: 0.309
+  floraPlacementScale: 60
+  floraPlacementThreshold: 0.553
   maxHeight: 12
   minHeight: 5
   lodes:

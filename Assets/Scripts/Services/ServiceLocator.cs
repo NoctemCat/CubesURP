@@ -9,7 +9,7 @@ public class ServiceLocator
     /// <summary>
     /// currently registered services.
     /// </summary>
-    private readonly Dictionary<string, object> services = new();
+    private readonly Dictionary<Type, object> services = new();
 
     /// <summary>
     /// Gets the currently active service locator instance.
@@ -22,19 +22,6 @@ public class ServiceLocator
         Instance = new ServiceLocator();
     }
 
-
-    //public T Get<T>()
-    //{
-    //    string key = typeof(T).Name;
-    //    if (!services.ContainsKey(key))
-    //    {
-    //        Debug.LogError($"{key} not registered with ServiceLocator");
-    //        throw new InvalidOperationException();
-    //    }
-
-    //    return (T)services[key];
-    //}
-
     /// <summary>
     /// Gets the service instance of the given type.
     /// </summary>
@@ -42,15 +29,13 @@ public class ServiceLocator
     /// <returns>The service instance.</returns>
     public static T Get<T>()
     {
-        //Debug.Log(Instance is null);
-        string key = typeof(T).Name;
-        if (!Instance.services.ContainsKey(key))
+        if (!Instance.services.ContainsKey(typeof(T)))
         {
-            Debug.LogError($"{key} not registered with ServiceLocator");
+            Debug.LogError($"{typeof(T).Name} not registered with ServiceLocator");
             throw new InvalidOperationException();
         }
 
-        return (T)Instance.services[key];
+        return (T)Instance.services[typeof(T)];
     }
 
     /// <summary>
@@ -60,14 +45,13 @@ public class ServiceLocator
     /// <param name="service">Service instance.</param>
     public static void Register<T>(T service)
     {
-        string key = typeof(T).Name;
-        if (Instance.services.ContainsKey(key))
+        if (Instance.services.ContainsKey(typeof(T)))
         {
-            Debug.LogError($"Attempted to register service of type {key} which is already registered with the ServiceLocator.");
+            Debug.LogError($"Attempted to register service of type {typeof(T).Name} which is already registered with the ServiceLocator.");
             return;
         }
 
-        Instance.services.Add(key, service);
+        Instance.services.Add(typeof(T), service);
     }
 
     /// <summary>
@@ -76,14 +60,13 @@ public class ServiceLocator
     /// <typeparam name="T">Service type.</typeparam>
     public static void Unregister<T>()
     {
-        string key = typeof(T).Name;
-        if (!Instance.services.ContainsKey(key))
+        if (!Instance.services.ContainsKey(typeof(T)))
         {
-            Debug.LogError($"Attempted to unregister service of type {key} which is not registered with the ServiceLocator.");
+            Debug.LogError($"Attempted to unregister service of type {typeof(T).Name} which is not registered with the ServiceLocator.");
             return;
         }
 
-        Instance.services.Remove(key);
+        Instance.services.Remove(typeof(T));
     }
     public static void Unregister<T>(T service) => Unregister<T>();
 }

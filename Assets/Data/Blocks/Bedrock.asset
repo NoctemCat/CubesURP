@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Bedrock
   m_EditorClassIdentifier: 
-  Name: Bedrock
-  UIDisplay: {fileID: -481722044, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: -1
-    Buffs: []
-  BlockType: 1
-  IsSolid: 1
-  IsTransparent: 0
-  BackfaceTexture: 9
-  FrontfaceTexture: 9
-  TopfaceTexture: 9
-  BottomfaceTexture: 9
-  LeftfaceTexture: 9
-  RightfaceTexture: 9
+  itemName: Bedrock
+  uiDisplay: {fileID: -481722044, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: 1
+    buffs: []
+  blockType: 1
+  isSolid: 1
+  isTransparent: 0
+  backfaceTexture: 9
+  frontfaceTexture: 9
+  topfaceTexture: 9
+  bottomfaceTexture: 9
+  leftfaceTexture: 9
+  rightfaceTexture: 9

@@ -72,7 +72,7 @@ public class SelectWorldMenu : MonoBehaviour
 
         _worldDatas.Sort(delegate (WorldData data1, WorldData data2)
         {
-            return DateTime.Compare(data1.AccessDate, data2.AccessDate);
+            return DateTime.Compare(data1.accessDate, data2.accessDate);
         });
         _worldDatas.Reverse();
 
@@ -84,13 +84,13 @@ public class SelectWorldMenu : MonoBehaviour
 
             Transform select = worldPanel.transform.GetChild(0);
             TMP_Text text = select.GetComponentInChildren<TMP_Text>();
-            text.text = data.WorldName;
+            text.text = data.worldName;
 
             Button selectClick = select.GetComponent<Button>();
             selectClick.onClick.AddListener(() =>
             {
-                data.AccessDate = DateTime.Now;
-                SaveWorldData(data, PathHelper.GetWorldDataPath(Path.Combine(worldsPath, data.WorldName)));
+                data.accessDate = DateTime.Now;
+                SaveWorldData(data, PathHelper.GetWorldDataPath(Path.Combine(worldsPath, data.worldName)));
 
                 _activeWorldData.SetData(data);
                 SceneManager.LoadScene("Main", LoadSceneMode.Single);
@@ -101,7 +101,7 @@ public class SelectWorldMenu : MonoBehaviour
             Button deleteClick = delete.GetComponent<Button>();
             deleteClick.onClick.AddListener(() =>
             {
-                var dir = new DirectoryInfo(Path.Combine(worldsPath, data.WorldName));
+                var dir = new DirectoryInfo(Path.Combine(worldsPath, data.worldName));
                 dir.Delete(true);
                 ParseSavedDirectories();
             });

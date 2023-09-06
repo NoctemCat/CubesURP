@@ -14,22 +14,33 @@ using static CubesUtils;
 public class StructureSystem : MonoBehaviour
 {
     private World World;
-    private NativeList<VoxelMod> _structures;
+    private EventSystem _eventSystem;
+
+    private Queue<List<VoxelMod>> _structuresPool;
+    private List<VoxelMod> _structures;
     private Dictionary<Vector3Int, List<VoxelMod>> _sortedStructures;
     private float _timer;
 
     private void Awake()
     {
         World = World.Instance;
-        //_chunks = chunks;
-        _structures = new NativeList<VoxelMod>(10000, Allocator.Persistent);
+
+        _structuresPool = new(100);
+        _structures = new(10000);
         _sortedStructures = new(100);
         _timer = 0f;
     }
 
-    private void OnDestroy()
+    private List<VoxelMod> ClaimList()
     {
-        _structures.Dispose();
+        if (_structuresPool.Count > 0)
+            return _structuresPool.Dequeue();
+        return new(20);
+    }
+    private void ReclaimList(List<VoxelMod> list)
+    {
+        list.Clear();
+        _structuresPool.Enqueue(list);
     }
 
     public void AddStructures(NativeList<VoxelMod> structures)
@@ -50,16 +61,19 @@ public class StructureSystem : MonoBehaviour
 
     private void SortStructures()
     {
-        if (_structures.Length <= 0) return;
+        foreach (var kvp in _sortedStructures)
+            ReclaimList(kvp.Value);
         _sortedStructures.Clear();
-        _sortedStructures.EnsureCapacity(_structures.Length);
 
-        for (int i = 0; i < _structures.Length; i++)
+        if (_structures.Count <= 0) return;
+        _sortedStructures.EnsureCapacity(_structures.Count);
+
+        for (int i = 0; i < _structures.Count; i++)
         {
             VoxelMod mod = _structures[i];
-            Vector3Int cPos = I3ToVI3(mod.ChunkPos);
+            Vector3Int cPos = I3ToVI3(mod.chunkPos);
             if (!_sortedStructures.ContainsKey(cPos))
-                _sortedStructures.Add(cPos, new(20));
+                _sortedStructures.Add(cPos, ClaimList());
 
             _sortedStructures[cPos].Add(mod);
         }

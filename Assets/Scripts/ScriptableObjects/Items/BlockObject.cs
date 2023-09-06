@@ -9,18 +9,18 @@ using UnityEngine.Rendering;
 [CreateAssetMenu(fileName = "BlockType", menuName = "Cubes/Block Type")]
 public class BlockObject : ItemObject, IDroppable
 {
-    public Block BlockType;
-    public bool IsSolid;
-    public bool IsTransparent;
+    public Block blockType;
+    public bool isSolid;
+    public bool isTransparent;
     //[NonSerialized] public Mesh ItemMesh;
 
     [Header("Texture Values")]
-    public int BackfaceTexture;
-    public int FrontfaceTexture;
-    public int TopfaceTexture;
-    public int BottomfaceTexture;
-    public int LeftfaceTexture;
-    public int RightfaceTexture;
+    public int backfaceTexture;
+    public int frontfaceTexture;
+    public int topfaceTexture;
+    public int bottomfaceTexture;
+    public int leftfaceTexture;
+    public int rightfaceTexture;
     public Mesh ItemMesh { get; set; }
 
     // Back, Front, Top, Bottom, Left, Right
@@ -28,12 +28,12 @@ public class BlockObject : ItemObject, IDroppable
     {
         return faceIndex switch
         {
-            0 => BackfaceTexture,
-            1 => FrontfaceTexture,
-            2 => TopfaceTexture,
-            3 => BottomfaceTexture,
-            4 => LeftfaceTexture,
-            5 => RightfaceTexture,
+            0 => backfaceTexture,
+            1 => frontfaceTexture,
+            2 => topfaceTexture,
+            3 => bottomfaceTexture,
+            4 => leftfaceTexture,
+            5 => rightfaceTexture,
             _ => throw new ArgumentOutOfRangeException("Invalid face index"),
         };
     }
@@ -106,36 +106,35 @@ public class BlockObject : ItemObject, IDroppable
 
     private void Reset()
     {
-        Type = ItemType.Block;
-        Stackable = true;
+        type = ItemType.Block;
+        stackable = true;
     }
 
 }
 
 public struct BlockStruct
 {
+    public bool isSolid;
+    public bool isTransparent;
 
-    public bool IsSolid;
-    public bool IsTransparent;
-
-    public int BackfaceTexture;
-    public int FrontfaceTexture;
-    public int TopfaceTexture;
-    public int BottomfaceTexture;
-    public int LeftfaceTexture;
-    public int RightfaceTexture;
+    public int backfaceTexture;
+    public int frontfaceTexture;
+    public int topfaceTexture;
+    public int bottomfaceTexture;
+    public int leftfaceTexture;
+    public int rightfaceTexture;
 
     public BlockStruct(BlockObject block)
     {
-        IsSolid = block.IsSolid;
-        IsTransparent = block.IsTransparent;
+        isSolid = block.isSolid;
+        isTransparent = block.isTransparent;
 
-        BackfaceTexture = block.BackfaceTexture;
-        FrontfaceTexture = block.FrontfaceTexture;
-        TopfaceTexture = block.TopfaceTexture;
-        BottomfaceTexture = block.BottomfaceTexture;
-        LeftfaceTexture = block.LeftfaceTexture;
-        RightfaceTexture = block.RightfaceTexture;
+        backfaceTexture = block.backfaceTexture;
+        frontfaceTexture = block.frontfaceTexture;
+        topfaceTexture = block.topfaceTexture;
+        bottomfaceTexture = block.bottomfaceTexture;
+        leftfaceTexture = block.leftfaceTexture;
+        rightfaceTexture = block.rightfaceTexture;
     }
 
     // Back, Front, Top, Bottom, Left, Right
@@ -143,12 +142,12 @@ public struct BlockStruct
     {
         return faceIndex switch
         {
-            0 => BackfaceTexture,
-            1 => FrontfaceTexture,
-            2 => TopfaceTexture,
-            3 => BottomfaceTexture,
-            4 => LeftfaceTexture,
-            5 => RightfaceTexture,
+            0 => backfaceTexture,
+            1 => frontfaceTexture,
+            2 => topfaceTexture,
+            3 => bottomfaceTexture,
+            4 => leftfaceTexture,
+            5 => rightfaceTexture,
             _ => throw new ArgumentOutOfRangeException("Invalid face index"),
         };
     }

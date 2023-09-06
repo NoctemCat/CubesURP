@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Stone
   m_EditorClassIdentifier: 
-  Name: Stone
-  UIDisplay: {fileID: 315391019, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: 11
-    Buffs: []
-  BlockType: 2
-  IsSolid: 1
-  IsTransparent: 0
-  BackfaceTexture: 0
-  FrontfaceTexture: 0
-  TopfaceTexture: 0
-  BottomfaceTexture: 0
-  LeftfaceTexture: 0
-  RightfaceTexture: 0
+  itemName: Stone
+  uiDisplay: {fileID: 315391019, guid: 1d6c02e218ed3304faf157bf1d040b41, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: -1
+    buffs: []
+  blockType: 2
+  isSolid: 1
+  isTransparent: 0
+  backfaceTexture: 0
+  frontfaceTexture: 0
+  topfaceTexture: 0
+  bottomfaceTexture: 0
+  leftfaceTexture: 0
+  rightfaceTexture: 0

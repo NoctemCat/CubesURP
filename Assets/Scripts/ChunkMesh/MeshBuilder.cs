@@ -36,11 +36,11 @@ static class MeshBuilder
             int threadOffset = ThreadIndex * JobsUtility.CacheLineSize;
             BlockStruct block = Blocks[(int)VoxelMap[i]];
 
-            if (block.IsTransparent && block.IsSolid)
+            if (block.isTransparent && block.isSolid)
             {
                 Counters[threadOffset + 1]++;
             }
-            if (block.IsSolid)
+            if (block.isSolid)
             {
                 Counters[threadOffset]++;
             }
@@ -134,7 +134,7 @@ static class MeshBuilder
                 BlockStruct current = Blocks[(int)VoxelMap[i]];
                 int3 pos = XYZMap[i];
 
-                if (!current.IsSolid)
+                if (!current.isSolid)
                 {
                     continue;
                 }
@@ -149,8 +149,8 @@ static class MeshBuilder
 
                     // These faces will be drawn
 
-                    if (!Blocks[(int)neighbour].IsSolid || !current.IsSolid
-                        || (current.IsSolid && Blocks[(int)neighbour].IsTransparent)
+                    if (!Blocks[(int)neighbour].isSolid || !current.isSolid
+                        || (current.isSolid && Blocks[(int)neighbour].isTransparent)
                     )
                     {
                         SolidFaces.AddNoResize(new(pos, f, current));
@@ -177,37 +177,37 @@ static class MeshBuilder
                 {
                     case VoxelFaces.Back:
                         pos.z = Data.ChunkWidth - 1;
-                        voxelMap = ChunkNeighbours.Back;
+                        voxelMap = ChunkNeighbours.back;
                         break;
                     case VoxelFaces.Front:
                         pos.z = 0;
-                        voxelMap = ChunkNeighbours.Front;
+                        voxelMap = ChunkNeighbours.front;
                         break;
                     case VoxelFaces.Top:
                         pos.y = 0;
-                        voxelMap = ChunkNeighbours.Top;
+                        voxelMap = ChunkNeighbours.top;
                         break;
                     case VoxelFaces.Bottom:
                         pos.y = Data.ChunkHeight - 1;
-                        voxelMap = ChunkNeighbours.Bottom;
+                        voxelMap = ChunkNeighbours.bottom;
                         break;
                     case VoxelFaces.Left:
                         pos.x = Data.ChunkLength - 1;
-                        voxelMap = ChunkNeighbours.Left;
+                        voxelMap = ChunkNeighbours.left;
                         break;
                     case VoxelFaces.Right:
                         pos.x = 0;
-                        voxelMap = ChunkNeighbours.Right;
+                        voxelMap = ChunkNeighbours.right;
                         break;
                     case VoxelFaces.Max:
                     default:
                         return false;
                 }
 
-                return Blocks[(int)voxelMap[CalcIndex(pos)]].IsTransparent;
+                return Blocks[(int)voxelMap[CalcIndex(pos)]].isTransparent;
             }
 
-            return Blocks[(int)VoxelMap[CalcIndex(pos)]].IsTransparent;
+            return Blocks[(int)VoxelMap[CalcIndex(pos)]].isTransparent;
         }
 
         Block GetNeighbour(int3 pos, VoxelFaces face)
@@ -219,27 +219,27 @@ static class MeshBuilder
                 {
                     case VoxelFaces.Back:
                         pos.z = Data.ChunkWidth - 1;
-                        voxelMap = ChunkNeighbours.Back;
+                        voxelMap = ChunkNeighbours.back;
                         break;
                     case VoxelFaces.Front:
                         pos.z = 0;
-                        voxelMap = ChunkNeighbours.Front;
+                        voxelMap = ChunkNeighbours.front;
                         break;
                     case VoxelFaces.Top:
                         pos.y = 0;
-                        voxelMap = ChunkNeighbours.Top;
+                        voxelMap = ChunkNeighbours.top;
                         break;
                     case VoxelFaces.Bottom:
                         pos.y = Data.ChunkHeight - 1;
-                        voxelMap = ChunkNeighbours.Bottom;
+                        voxelMap = ChunkNeighbours.bottom;
                         break;
                     case VoxelFaces.Left:
                         pos.x = Data.ChunkLength - 1;
-                        voxelMap = ChunkNeighbours.Left;
+                        voxelMap = ChunkNeighbours.left;
                         break;
                     case VoxelFaces.Right:
                         pos.x = 0;
-                        voxelMap = ChunkNeighbours.Right;
+                        voxelMap = ChunkNeighbours.right;
                         break;
                     case VoxelFaces.Max:
                     default:
@@ -325,9 +325,9 @@ static class MeshBuilder
 
         public void Execute(int i)
         {
-            float3 pos = AllFaces[i].Pos;
-            int f = (int)AllFaces[i].Face;
-            BlockStruct block = AllFaces[i].Block;
+            float3 pos = AllFaces[i].position;
+            int f = (int)AllFaces[i].face;
+            BlockStruct block = AllFaces[i].block;
 
             float3 dot0 = pos + Data.VoxelVerts[Data.VoxelTris[f].x];
             float3 dot1 = pos + Data.VoxelVerts[Data.VoxelTris[f].y];
@@ -341,10 +341,10 @@ static class MeshBuilder
             //Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = uvs.c1 };
             //Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = uvs.c2 };
             //Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = uvs.c3 };
-            Vertices[4 * i + 0] = new Vertex() { Pos = dot0, Nor = normal, UV = new(0f, 0f, block.GetTextureID(f)) };
-            Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = new(0f, 1f, block.GetTextureID(f)) };
-            Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = new(1f, 0f, block.GetTextureID(f)) };
-            Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = new(1f, 1f, block.GetTextureID(f)) };
+            Vertices[4 * i + 0] = new Vertex() { position = dot0, normal = normal, uv = new(0f, 0f, block.GetTextureID(f)) };
+            Vertices[4 * i + 1] = new Vertex() { position = dot1, normal = normal, uv = new(0f, 1f, block.GetTextureID(f)) };
+            Vertices[4 * i + 2] = new Vertex() { position = dot2, normal = normal, uv = new(1f, 0f, block.GetTextureID(f)) };
+            Vertices[4 * i + 3] = new Vertex() { position = dot3, normal = normal, uv = new(1f, 1f, block.GetTextureID(f)) };
         }
 
         private readonly float2x4 AddTexture(int textureID)
@@ -429,18 +429,18 @@ static class MeshBuilder
             var vertexB = Vertices[indexB];
             var vertexC = Vertices[indexC];
 
-            float3 pointA = vertexA.Pos;
-            float3 pointB = vertexB.Pos;
-            float3 pointC = vertexC.Pos;
+            float3 pointA = vertexA.position;
+            float3 pointB = vertexB.position;
+            float3 pointC = vertexC.position;
 
             float3 sideAB = pointB - pointA;
             float3 sideAC = pointC - pointA;
 
             float3 triangleNormal = math.normalize(math.cross(sideAB, sideAC));
 
-            vertexA.Nor += triangleNormal;
-            vertexB.Nor += triangleNormal;
-            vertexC.Nor += triangleNormal;
+            vertexA.normal += triangleNormal;
+            vertexB.normal += triangleNormal;
+            vertexC.normal += triangleNormal;
 
             Vertices[indexA] = vertexA;
             Vertices[indexB] = vertexB;
@@ -455,7 +455,7 @@ static class MeshBuilder
         public void Execute(int i)
         {
             var vertex = Vertices[i];
-            vertex.Nor = math.normalize(vertex.Nor);
+            vertex.normal = math.normalize(vertex.normal);
             Vertices[i] = vertex;
         }
     }

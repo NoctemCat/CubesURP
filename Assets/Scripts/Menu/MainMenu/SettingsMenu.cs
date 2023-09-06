@@ -33,12 +33,12 @@ public class SettingsMenu : MonoBehaviour
             SaveSettings();
         }
 
-        _viewDistanceSlider.value = _settings.ViewDistance;
-        _viewDistanceLabel.text = $"View Distance: {_settings.ViewDistance}";
-        _mouseSensitivitySlider.value = _settings.MouseSenstivity;
-        _mouseSensitivityLabel.text = $"Mouse Sensitivity: {_settings.MouseSenstivity:0.00}";
-        _generateAtOnceField.text = _settings.GenerateAtOnce.ToString();
-        _timeBetweenGeneratingField.text = _settings.TimeBetweenGenerating.ToString();
+        _viewDistanceSlider.value = _settings.viewDistance;
+        _viewDistanceLabel.text = $"View Distance: {_settings.viewDistance}";
+        _mouseSensitivitySlider.value = _settings.mouseSenstivity;
+        _mouseSensitivityLabel.text = $"Mouse Sensitivity: {_settings.mouseSenstivity:0.00}";
+        _generateAtOnceField.text = _settings.generateAtOnce.ToString();
+        _timeBetweenGeneratingField.text = _settings.timeBetweenGenerating.ToString();
 
         _viewDistanceSlider.onValueChanged.AddListener(OnViewDistanceChanged);
         _mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivityChanged);
@@ -50,23 +50,23 @@ public class SettingsMenu : MonoBehaviour
     private void OnViewDistanceChanged(float slider)
     {
         _viewDistanceLabel.text = $"View Distance: {(int)slider}";
-        _settings.ViewDistance = (int)slider;
+        _settings.viewDistance = (int)slider;
     }
 
     private void OnMouseSensitivityChanged(float slider)
     {
         _mouseSensitivityLabel.text = $"Mouse Sensitivity: {slider:0.00}";
-        _settings.MouseSenstivity = slider;
+        _settings.mouseSenstivity = slider;
     }
 
     private void OnGenerateAtOnceEnded(string strValue)
     {
-        _settings.GenerateAtOnce = int.Parse(strValue);
+        _settings.generateAtOnce = int.Parse(strValue);
     }
 
     private void OnTimeBetweenEnded(string strValue)
     {
-        _settings.TimeBetweenGenerating = float.Parse(strValue);
+        _settings.timeBetweenGenerating = float.Parse(strValue);
     }
 
     public void SaveSettings()

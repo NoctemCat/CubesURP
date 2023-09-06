@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e620a09b054cdcc488d4e3cb5ff1c63b, type: 3}
   m_Name: Desert
   m_EditorClassIdentifier: 
-  BiomeName: Desert
-  Offset: 6545
-  Scale: 0.058
-  TerrainHeight: 10
-  TerrainScale: 0.1
-  SurfaceBlock: 9
-  SubsurfaceBlock: 9
-  FloraType: 1
-  FloraZoneScale: 55.48
-  FloraZoneThreshold: 0.184
-  FloraPlacementScale: 55.48
-  FloraPlacementThreshold: 0.702
+  biomeName: Desert
+  offset: 6546
+  scale: 0.058
+  terrainHeight: 10
+  terrainScale: 0.1
+  surfaceBlock: 9
+  subsurfaceBlock: 9
+  floraType: 1
+  floraZoneScale: 55.48
+  floraZoneThreshold: 0.184
+  floraPlacementScale: 55.48
+  floraPlacementThreshold: 0.702
   maxHeight: 7
   minHeight: 3
   lodes:

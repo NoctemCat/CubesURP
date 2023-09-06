@@ -27,7 +27,7 @@ public class World : MonoBehaviour
     public NativeArray<BiomeStruct> Biomes { get; private set; }
     //public float3 RandomXYZ { get; private set; }
 
-    [SerializeField] private BiomeAttributes[] BiomeScObjs;
+    [SerializeField] private BiomeAttributes[] _biomeScObjs;
     [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
     [field: SerializeField] public Material SolidMaterial { get; private set; }
     [field: SerializeField] public Material TransparentMaterial { get; private set; }
@@ -60,7 +60,7 @@ public class World : MonoBehaviour
         else
             Destroy(Instance);
 
-        WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.WorldName);
+        WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName);
 
         LoadSettings();
 
@@ -69,7 +69,7 @@ public class World : MonoBehaviour
 
         _refreshDistance = false;
 
-        Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.Seed.GetHashCode(), 0)));
+        Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.seed.GetHashCode(), 0)));
         float3 randomXYZ = rng.NextFloat3() * 10000;
 
         VoxelData = new(randomXYZ);
@@ -79,10 +79,10 @@ public class World : MonoBehaviour
         NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
 
-        NativeArray<BiomeStruct> biomesTemp = new(BiomeScObjs.Length, Allocator.Persistent);
-        for (int i = 0; i < BiomeScObjs.Length; i++)
+        NativeArray<BiomeStruct> biomesTemp = new(_biomeScObjs.Length, Allocator.Persistent);
+        for (int i = 0; i < _biomeScObjs.Length; i++)
         {
-            biomesTemp[i] = new(BiomeScObjs[i]);
+            biomesTemp[i] = new(_biomeScObjs[i]);
         }
         Biomes = biomesTemp;
 
@@ -147,7 +147,6 @@ public class World : MonoBehaviour
         {
             string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
             Settings = JsonUtility.FromJson<Settings>(loadSettings);
-            ViewCoords = WorldHelper.InitViewCoords(Settings.ViewDistance);
             _refreshDistance = true;
         }
         else
@@ -158,6 +157,7 @@ public class World : MonoBehaviour
             string saveSettings = JsonUtility.ToJson(settings, true);
             File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
         }
+        ViewCoords = WorldHelper.InitViewCoords(Settings.viewDistance);
     }
 
     public Chunk GetChunkFromVector3(Vector3Int pos)
@@ -239,9 +239,9 @@ public class World : MonoBehaviour
             {
                 Vector3Int viewChunkPos = kvp.Key - PlayerChunk;
                 if (
-                    viewChunkPos.x < -Settings.ViewDistance - 2 || viewChunkPos.x > Settings.ViewDistance + 2 ||
-                    viewChunkPos.y < -Settings.ViewDistance - 2 || viewChunkPos.y > Settings.ViewDistance + 2 ||
-                    viewChunkPos.z < -Settings.ViewDistance - 2 || viewChunkPos.z > Settings.ViewDistance + 2
+                    viewChunkPos.x < -Settings.viewDistance - 2 || viewChunkPos.x > Settings.viewDistance + 2 ||
+                    viewChunkPos.y < -Settings.viewDistance - 2 || viewChunkPos.y > Settings.viewDistance + 2 ||
+                    viewChunkPos.z < -Settings.viewDistance - 2 || viewChunkPos.z > Settings.viewDistance + 2
                 )
                 {
                     //chunk.Dispose();
@@ -295,7 +295,7 @@ public class World : MonoBehaviour
             )
             {
                 LastPlayerChunk = PlayerChunk;
-                isCalncelled = await UniTask.WaitForSeconds(Settings.TimeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+                isCalncelled = await UniTask.WaitForSeconds(Settings.timeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
                 if (isCalncelled) return;
             }
 
@@ -312,9 +312,9 @@ public class World : MonoBehaviour
         {
             Vector3Int viewChunkPos = I3ToVI3(ActiveChunks[i].ChunkPos) - PlayerChunk;
             if (
-                viewChunkPos.x < -Settings.ViewDistance || viewChunkPos.x > Settings.ViewDistance ||
-                viewChunkPos.y < -Settings.ViewDistance || viewChunkPos.y > Settings.ViewDistance ||
-                viewChunkPos.z < -Settings.ViewDistance || viewChunkPos.z > Settings.ViewDistance
+                viewChunkPos.x < -Settings.viewDistance || viewChunkPos.x > Settings.viewDistance ||
+                viewChunkPos.y < -Settings.viewDistance || viewChunkPos.y > Settings.viewDistance ||
+                viewChunkPos.z < -Settings.viewDistance || viewChunkPos.z > Settings.viewDistance
             )
             {
                 ActiveChunks[i].IsActive = false;
@@ -327,7 +327,7 @@ public class World : MonoBehaviour
     bool GenerateVoxelMaps()
     {
         bool allGenerated = true;
-        int toGenerate = Settings.GenerateAtOnce;
+        int toGenerate = Settings.generateAtOnce;
 
         for (int i = 0; i < ViewCoords.Count; i++)
         {
@@ -412,7 +412,7 @@ public class World : MonoBehaviour
                     _ => VoxelFlags.None,
                 };
 
-                chunk.NeighboursGenerated |= flag;
+                chunk.AddNeighbours(flag);
             }
         }
     }
@@ -435,7 +435,7 @@ public class World : MonoBehaviour
                     _ => VoxelFlags.None,
                 };
 
-                otherChunk.NeighboursGenerated |= flag;
+                otherChunk.AddNeighbours(flag);
             }
         }
     }
@@ -512,7 +512,7 @@ public class World : MonoBehaviour
 
             if (!chunk.IsActive) return false;
             //Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].
-            result = Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].IsSolid;
+            result = Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
         }
 
         _results.Add(worldPosInt, result);
@@ -540,25 +540,25 @@ public class World : MonoBehaviour
 [Serializable]
 public struct Settings
 {
-    public string Version;
+    public string version;
 
     [Header("Performance")]
-    public int ViewDistance;
+    public int viewDistance;
 
     [Header("Chunk Generation")]
-    public int GenerateAtOnce;
-    public float TimeBetweenGenerating;
+    public int generateAtOnce;
+    public float timeBetweenGenerating;
 
     [Header("Controls")]
     [Range(0.1f, 50f)]
-    public float MouseSenstivity;
+    public float mouseSenstivity;
 
     public void Init()
     {
-        Version = "0.0.01";
-        ViewDistance = 5;
-        GenerateAtOnce = 8;
-        TimeBetweenGenerating = 0.25f;
-        MouseSenstivity = 25f;
+        version = "0.0.01";
+        viewDistance = 5;
+        generateAtOnce = 8;
+        timeBetweenGenerating = 0.25f;
+        mouseSenstivity = 25f;
     }
 }

@@ -80,7 +80,7 @@ public class Player : MonoBehaviour
 
         //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
         BlockObject blockObject = World.GetVoxel(highlightBlock.position);
-        if (blockObject.BlockType != Block.Air)
+        if (blockObject.blockType != Block.Air)
         {
             World.PlaceBlock(highlightBlock.position, 0);
 
@@ -102,7 +102,7 @@ public class Player : MonoBehaviour
         BlockObject blockObjet = World.GetVoxel(placeBlock.position);
 
         if (
-            blockObjet.BlockType != Block.Air ||
+            blockObjet.blockType != Block.Air ||
             !placeBlock.gameObject.activeSelf ||
             !value.isPressed
         ) return;
@@ -174,8 +174,8 @@ public class Player : MonoBehaviour
         {
             PlaceCursorBlock();
 
-            float rotationY = mouse.y * World.Settings.MouseSenstivity * Time.deltaTime;
-            float rotationX = mouse.x * World.Settings.MouseSenstivity * Time.deltaTime;
+            float rotationY = mouse.y * World.Settings.mouseSenstivity * Time.deltaTime;
+            float rotationX = mouse.x * World.Settings.mouseSenstivity * Time.deltaTime;
             if (rotationY > 0)
                 angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
             else
@@ -314,7 +314,7 @@ public class Player : MonoBehaviour
         if (other.TryGetComponent(out GroundItem item) && Time.time - item.CreateTime > 0.5f)
         {
             //Debug.Log($"{Time.time}, {item.CreateTime}");
-            _inventory.AddItem(item.ItemObj.Data, item.Amount);
+            _inventory.AddItem(item.ItemObj.data, item.Amount);
             other.gameObject.SetActive(false);
             return;
         }

@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: Air
   m_EditorClassIdentifier: 
-  Name: Air
-  UIDisplay: {fileID: 0}
-  Stackable: 0
-  Type: 0
-  Decription: 
-  Data:
-    Name: Air
-    Id: 0
-    Buffs: []
-  BlockType: 0
-  IsSolid: 0
-  IsTransparent: 1
-  BackfaceTexture: 0
-  FrontfaceTexture: 0
-  TopfaceTexture: 0
-  BottomfaceTexture: 0
-  LeftfaceTexture: 0
-  RightfaceTexture: 0
+  itemName: Air
+  uiDisplay: {fileID: 21300000, guid: 1faed2715a249e14a93851d6a7d7046b, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: -1
+    buffs: []
+  blockType: 0
+  isSolid: 0
+  isTransparent: 1
+  backfaceTexture: 0
+  frontfaceTexture: 0
+  topfaceTexture: 0
+  bottomfaceTexture: 0
+  leftfaceTexture: 0
+  rightfaceTexture: 0

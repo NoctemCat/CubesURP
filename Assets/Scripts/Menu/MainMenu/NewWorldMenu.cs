@@ -56,9 +56,9 @@ public class NewWorldMenu : MonoBehaviour
 
         WorldData data = new()
         {
-            Seed = _worldSeedInput.text,
-            WorldName = _worldNameInput.text,
-            AccessDate = DateTime.Now,
+            seed = _worldSeedInput.text,
+            worldName = _worldNameInput.text,
+            accessDate = DateTime.Now,
         };
         string worldDataPath = PathHelper.GetWorldDataPath(worldDir);
 

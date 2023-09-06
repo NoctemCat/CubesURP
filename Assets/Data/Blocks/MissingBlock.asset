@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd9b2f9e553a1714997ab0c55d93ad6e, type: 3}
   m_Name: MissingBlock
   m_EditorClassIdentifier: 
-  Name: MissingBlock
-  UIDisplay: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  Stackable: 1
-  Type: 0
-  Decription: 
-  Data:
-    Name: 
-    Id: 8
-    Buffs: []
-  BlockType: 13
-  IsSolid: 1
-  IsTransparent: 0
-  BackfaceTexture: 14
-  FrontfaceTexture: 14
-  TopfaceTexture: 14
-  BottomfaceTexture: 14
-  LeftfaceTexture: 14
-  RightfaceTexture: 14
+  itemName: Missing
+  uiDisplay: {fileID: 21300000, guid: 1d0e186252aaa3c4fbf86f28b9ca0d55, type: 3}
+  stackable: 1
+  type: 0
+  decription: 
+  data:
+    itemName: 
+    id: 9
+    buffs: []
+  blockType: 13
+  isSolid: 1
+  isTransparent: 0
+  backfaceTexture: 14
+  frontfaceTexture: 14
+  topfaceTexture: 14
+  bottomfaceTexture: 14
+  leftfaceTexture: 14
+  rightfaceTexture: 14

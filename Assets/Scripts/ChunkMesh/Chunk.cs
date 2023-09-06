@@ -22,15 +22,15 @@ public class Chunk
     private Mesh _chunkMesh;
     private Material[] _materials = new Material[2];
     public string ChunkName { get; private set; }
+    public int3 ChunkPos { get; private set; }
+    public Vector3 WorldPos { get; private set; }
 
-    private readonly World World;
-    VoxelData Data;
-    public int3 ChunkPos;
-    public Vector3 WorldPos;
+    private readonly World _world;
+    private VoxelData _data;
 
     public NativeArray<Block> VoxelMap { get; private set; }
-    private NativeList<StructureMarker> _structures;
     public NativeList<VoxelMod> NeighbourModifications { get; private set; }
+    private NativeList<StructureMarker> _structures;
     private NativeList<VoxelMod> _modifications;
     private MeshDataHolder _holder;
 
@@ -53,14 +53,13 @@ public class Chunk
         }
     }
 
-    public VoxelFlags NeighboursGenerated;
+    public VoxelFlags NeighboursGenerated { get; private set; }
     public JobHandle VoxelMapAccess { get; private set; }
     private Action _initActions;
 
     public Chunk(Vector3Int chunkPos)
     {
-
-        World = World.Instance;
+        _world = World.Instance;
         Init(chunkPos);
         _isLoaded = false;
 
@@ -68,7 +67,7 @@ public class Chunk
     }
     public Chunk(ChunkData chunkData)
     {
-        World = World.Instance;
+        _world = World.Instance;
         Init(chunkData.ChunkPos);
         _isLoaded = true;
 
@@ -82,7 +81,7 @@ public class Chunk
         _voxelMapGenerated = true;
         _dirtyMesh = true;
 
-        World.CheckNeighbours(this);
+        _world.CheckNeighbours(this);
         if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
         {
             _initActions -= CheckNeighbours;
@@ -94,9 +93,9 @@ public class Chunk
         _initActions += CheckNeighbours;
         _initActions += AddStructuresToWorld;
 
-        Data = World.VoxelData;
+        _data = _world.VoxelData;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
-        WorldPos = new(chunkPos.x * Data.ChunkWidth, chunkPos.y * Data.ChunkHeight, chunkPos.z * Data.ChunkLength);
+        WorldPos = new(chunkPos.x * _data.ChunkWidth, chunkPos.y * _data.ChunkHeight, chunkPos.z * _data.ChunkLength);
 
         //WorldPoints = new Vector3[9];
         //WorldPoints[0] = WorldPos;
@@ -109,7 +108,7 @@ public class Chunk
         //WorldPoints[7] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
         //WorldPoints[8] = WorldPos + new Vector3(Data.ChunkWidth + 1f / 2f, Data.ChunkHeight + 1f / 2f, Data.ChunkLength + 1f / 2f);
 
-        VoxelMap = new(Data.ChunkSize, Allocator.Persistent);
+        VoxelMap = new(_data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
         NeighbourModifications = new(512, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
@@ -126,11 +125,11 @@ public class Chunk
         _meshFilter = _chunkObject.AddComponent<MeshFilter>();
         _meshRenderer = _chunkObject.AddComponent<MeshRenderer>();
 
-        _materials[0] = World.SolidMaterial;
-        _materials[1] = World.TransparentMaterial;
+        _materials[0] = _world.SolidMaterial;
+        _materials[1] = _world.TransparentMaterial;
         _meshRenderer.materials = _materials;
 
-        _chunkObject.transform.SetParent(World.transform);
+        _chunkObject.transform.SetParent(_world.transform);
         _chunkObject.transform.position = WorldPos;
         _chunkObject.name = PathHelper.GenerateChunkName(ChunkPos);
         ChunkName = _chunkObject.name;
@@ -156,7 +155,7 @@ public class Chunk
         VoxelMapAccess.Complete();
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
-            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+            if (_world.Chunks.TryGetValue(I3ToVI3(ChunkPos + _data.FaceChecks[(int)i]), out Chunk chunk))
                 chunk.VoxelMapAccess.Complete();
         }
         NeighbourModifications.Dispose();
@@ -185,7 +184,7 @@ public class Chunk
 
         if (NeighbourModifications.Length > 0)
         {
-            World.StructureSystem.AddStructures(NeighbourModifications);
+            _world.StructureSystem.AddStructures(NeighbourModifications);
         }
     }
 
@@ -218,6 +217,12 @@ public class Chunk
             _requestingStop = false;
         }
     }
+
+    public void AddNeighbours(VoxelFlags neighbours)
+    {
+        NeighboursGenerated |= neighbours;
+    }
+
 
     public async UniTaskVoid AddModification(VoxelMod mod)
     {
@@ -254,7 +259,7 @@ public class Chunk
         _voxelMapGenerated = true;
         _dirtyMesh = true;
 
-        World.CheckNeighbours(this);
+        _world.CheckNeighbours(this);
         if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
         {
             _initActions -= CheckNeighbours;
@@ -270,7 +275,7 @@ public class Chunk
         if (isFinished)
         {
             _dirtyMesh = false;
-            World.ChunkCreated(this);
+            _world.ChunkCreated(this);
         }
         else
         {
@@ -285,9 +290,9 @@ public class Chunk
     {
         GenerateChunkJob generateChunk = new()
         {
-            Data = Data,
-            Biomes = World.Biomes,
-            XYZMap = World.XYZMap,
+            Data = _data,
+            Biomes = _world.Biomes,
+            XYZMap = _world.XYZMap,
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
@@ -296,8 +301,8 @@ public class Chunk
 
         BuildStructuresJob buildStructures = new()
         {
-            Data = Data,
-            Biomes = World.Biomes,
+            Data = _data,
+            Biomes = _world.Biomes,
             ChunkPos = ChunkPos,
             Structures = _structures.AsDeferredJobArray(),
 
@@ -345,7 +350,7 @@ public class Chunk
         NativeList<JobHandle> neighbours = new(7, Allocator.Temp);
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
-            if (World.Chunks.TryGetValue(I3ToVI3(ChunkPos + Data.FaceChecks[(int)i]), out Chunk chunk))
+            if (_world.Chunks.TryGetValue(I3ToVI3(ChunkPos + _data.FaceChecks[(int)i]), out Chunk chunk))
                 neighbours.Add(chunk.VoxelMapAccess);
         }
         neighbours.Add(VoxelMapAccess);
@@ -355,7 +360,7 @@ public class Chunk
 
         ApplyModsJob applyModsJob = new()
         {
-            Data = Data,
+            Data = _data,
             Modifications = mods,
             VoxelMap = VoxelMap,
         };
@@ -406,7 +411,7 @@ public struct GenerateChunkJob : IJobParallelFor
 
         for (int i = 0; i < Biomes.Length; i++)
         {
-            float weight = Get2DPerlin(Data, new float2(pos.x, pos.z), Biomes[i].Offset, Biomes[i].Scale);
+            float weight = Get2DPerlin(Data, new float2(pos.x, pos.z), Biomes[i].offset, Biomes[i].scale);
 
             if (weight > strongestWeight)
             {
@@ -414,7 +419,7 @@ public struct GenerateChunkJob : IJobParallelFor
                 strongestBiomeIndex = i;
             }
 
-            float height = Biomes[i].TerrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biomes[i].TerrainScale) * weight;
+            float height = Biomes[i].terrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biomes[i].terrainScale) * weight;
             sumOfHeights += height;
             count++;
         }
@@ -433,11 +438,11 @@ public struct GenerateChunkJob : IJobParallelFor
 
         if (pos.y == terrainHeight)
         {
-            voxelValue = biome.SurfaceBlock;
+            voxelValue = biome.surfaceBlock;
         }
         else if (pos.y < terrainHeight && pos.y > terrainHeight - 4)
         {
-            voxelValue = biome.SubsurfaceBlock;
+            voxelValue = biome.subsurfaceBlock;
         }
         else if (pos.y > terrainHeight)
         {
@@ -451,14 +456,14 @@ public struct GenerateChunkJob : IJobParallelFor
         // SECOND PASS
         if (voxelValue == Block.Stone)
         {
-            for (int i = 0; i < biome.Lodes.Length; i++)
+            for (int i = 0; i < biome.lodes.Length; i++)
             {
-                LodeSctruct lode = biome.Lodes[i];
-                if (pos.y > lode.MinHeight && pos.y < lode.MaxHeight)
+                LodeSctruct lode = biome.lodes[i];
+                if (pos.y > lode.minHeight && pos.y < lode.maxHeight)
                 {
-                    if (Get3DPerlin(Data, pos, lode.NoiseOffset, lode.Scale) > lode.Threshold)
+                    if (Get3DPerlin(Data, pos, lode.noiseOffset, lode.scale) > lode.threshold)
                     {
-                        voxelValue = lode.BlockID;
+                        voxelValue = lode.blockID;
                     }
                 }
             }
@@ -466,11 +471,11 @@ public struct GenerateChunkJob : IJobParallelFor
 
         if (pos.y == terrainHeight)
         {
-            if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, biome.FloraZoneScale) > biome.FloraZoneThreshold)
+            if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, biome.floraZoneScale) > biome.floraZoneThreshold)
             {
-                if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.FloraPlacementScale) > biome.FloraPlacementThreshold)
+                if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.floraPlacementScale) > biome.floraPlacementThreshold)
                 {
-                    Structures.AddNoResize(new(strongestBiomeIndex, pos, biome.FloraType));
+                    Structures.AddNoResize(new(strongestBiomeIndex, pos, biome.floraType));
                 }
             }
         }
@@ -499,14 +504,14 @@ public struct BuildStructuresJob : IJobParallelForDefer
 
     public void Execute(int i)
     {
-        var biome = Biomes[Structures[i].BiomeIndex];
-        switch (Structures[i].Type)
+        var biome = Biomes[Structures[i].biomeIndex];
+        switch (Structures[i].type)
         {
             case StructureType.Tree:
-                MakeTree(Structures[i].Position, biome.MinHeight, biome.MaxHeight);
+                MakeTree(Structures[i].position, biome.minHeight, biome.maxHeight);
                 break;
             case StructureType.Cactus:
-                MakeCacti(Structures[i].Position, biome.MinHeight, biome.MaxHeight);
+                MakeCacti(Structures[i].position, biome.minHeight, biome.maxHeight);
                 break;
         }
     }
@@ -611,7 +616,7 @@ public struct ApplyModsJob : IJobParallelFor
 
     public void Execute(int i)
     {
-        VoxelMap[CalcIndex(Modifications[i].Position)] = Modifications[i].Block;
+        VoxelMap[CalcIndex(Modifications[i].position)] = Modifications[i].block;
     }
 
     readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;

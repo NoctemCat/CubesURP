@@ -19,7 +19,7 @@ public class MouseDragData : MonoBehaviour
     [field: NonSerialized] public InventorySlot HoverSlot { get; private set; }
 
     private RectTransform _rect;
-    public bool HasItem => Slot.Item is not null && Slot.Item.Id >= 0;
+    public bool HasItem => Slot.Item is not null && Slot.Item.id >= 0;
     public bool OverInterface { get; set; }
 
     [SerializeField] private Player _player;
@@ -57,10 +57,10 @@ public class MouseDragData : MonoBehaviour
 
     private void SlotUpdate(InventorySlot slot)
     {
-        if (slot.Item.Id < 0)
+        if (slot.Item.id < 0)
             _uiInventorySlot.Disable();
         else
-            _uiInventorySlot.Set(slot.ItemObject.UIDisplay, slot.Amount.ToString("n0"), slot.Item.Name);
+            _uiInventorySlot.Set(slot.ItemObject.uiDisplay, slot.Amount.ToString("n0"), slot.Item.itemName);
     }
 
     private void DropOneItemCallback(InputAction.CallbackContext context)
@@ -114,7 +114,7 @@ public class MouseDragData : MonoBehaviour
 
     public void SwapMerge(InventorySlot slot1, InventorySlot slot2)
     {
-        if (slot2.HasItem && slot2.Item.Equals(slot1.Item) && slot2.ItemObject.Stackable)
+        if (slot2.HasItem && slot2.Item.Equals(slot1.Item) && slot2.ItemObject.stackable)
         {
             InventoryObject.MergeItems(slot1, slot2);
         }

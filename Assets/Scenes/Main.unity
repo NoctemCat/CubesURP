@@ -272,8 +272,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2eed5e8b24f413c46b3ff40743ed58d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ScreenHolder: {fileID: 2112701869}
-  ScreenPrefab: {fileID: 2902381145956862153, guid: 94bb54894248a0b42983378ade06f48c,
+  <ScreenHolder>k__BackingField: {fileID: 2112701869}
+  <ScreenPrefab>k__BackingField: {fileID: 2902381145956862153, guid: 94bb54894248a0b42983378ade06f48c,
     type: 3}
 --- !u!4 &82024068
 Transform:
@@ -4214,15 +4214,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   <Settings>k__BackingField:
-    Version: 0.0.01
-    ViewDistance: 5
-    GenerateAtOnce: 8
-    TimeBetweenGenerating: 0.25
-    MouseSenstivity: 25
-  BiomeScObjs:
-  - {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
+    version: 
+    viewDistance: 0
+    generateAtOnce: 0
+    timeBetweenGenerating: 0
+    mouseSenstivity: 0
+  _biomeScObjs:
   - {fileID: 11400000, guid: 40ed8244d10033b4dbccba0319928fcd, type: 2}
   - {fileID: 11400000, guid: 7680dfad7b7273d458d36887ba91c434, type: 2}
+  - {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
   <WorldData>k__BackingField: {fileID: 11400000, guid: 2f719428bdcc3de44a9fca93196af111,
     type: 2}
   <SolidMaterial>k__BackingField: {fileID: 2100000, guid: 6ca309128bc1fa5478151ca6626b17af,
