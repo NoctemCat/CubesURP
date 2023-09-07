@@ -2892,7 +2892,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isGrounded: 0
   isSprinting: 0
-  ApplyGravity: 0
+  ApplyGravity: 1
   walkSpeed: 3
   sprintSpeed: 20
   jumpForce: 7

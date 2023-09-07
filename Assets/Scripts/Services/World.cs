@@ -120,7 +120,7 @@ public class World : MonoBehaviour
 
         var playerChunk = (args as PlayerChunkChangedArgs).newChunkPos;
         _playerChunk = playerChunk;
-        ActiveChunks.Clear();
+        //ActiveChunks.Clear();
 
         if (_generatingChunks)
         {
@@ -325,6 +325,7 @@ public class World : MonoBehaviour
 
     void ActivateNearChunks()
     {
+        ActiveChunks.Clear();
         for (int i = 0; i < ViewCoords.Count; i++)
         {
             Vector3Int checkCoord = _playerChunk + ViewCoords[i];
