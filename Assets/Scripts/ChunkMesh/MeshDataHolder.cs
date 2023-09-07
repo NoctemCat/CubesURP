@@ -13,8 +13,7 @@ using static CubesUtils;
 public struct MeshDataHolder
 {
     private World _world;
-    private VoxelData data;
-    private int3 _chunkPos;
+    private VoxelData _data;
 
     private MeshData _meshData;
     private MeshFacesData _facesData;
@@ -27,19 +26,20 @@ public struct MeshDataHolder
     int _numberOfFaces;
     public readonly bool HasFaces => _numberOfFaces > 0;
 
+    public int3 chunkPos;
     /// <summary>
     /// Can only be called after CountBlockTypes
     /// </summary>
     public bool IsEmpty => _countBlocks[2] == 0;
 
-    public void Init(int3 chunkPos)
+    public void Init()
     {
-        _world = World.Instance;
-        data = _world.VoxelData;
-        _chunkPos = chunkPos;
+        _world = ServiceLocator.Get<World>();
+        _data = _world.VoxelData;
 
         _meshData.InitLists();
         _facesData.InitLists();
+        chunkPos = new();
         //FacesData.AllFaces
 
         _layout = new NativeArray<VertexAttributeDescriptor>(3, Allocator.Persistent);
@@ -107,9 +107,9 @@ public struct MeshDataHolder
         JobHandle access = FillNeighbours(out Neighbours neighbours);
         MeshBuilder.SortVoxelFacesJob sortVoxelsJob = new()
         {
-            Data = data,
+            Data = _data,
             ChunkNeighbours = neighbours,
-            ChunkPos = _chunkPos,
+            ChunkPos = chunkPos,
             VoxelMap = voxelMap,
             Blocks = _world.NativeBlocks,
             XYZMap = _world.XYZMap,
@@ -118,13 +118,13 @@ public struct MeshDataHolder
             TransparentFaces = _facesData.transparentFaces.AsParallelWriter(),
         };
         //return sortVoxelsJob.Schedule(Data.ChunkSize, Data.ChunkSize / 8, voxelMapAccess);
-        return sortVoxelsJob.Schedule(data.ChunkSize, data.ChunkSize / 8, JobHandle.CombineDependencies(voxelMapAccess, access));
+        return sortVoxelsJob.Schedule(_data.ChunkSize, _data.ChunkSize / 8, JobHandle.CombineDependencies(voxelMapAccess, access));
     }
 
     public JobHandle FillNeighbours(out Neighbours neighbours)
     {
         NativeList<JobHandle> accesses = new(6, Allocator.Temp);
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Back]), out Chunk chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Back]), out Chunk chunk))
         {
             neighbours.back = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -132,7 +132,7 @@ public struct MeshDataHolder
         else
             neighbours.back = _world.DummyMap;
 
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Front]), out chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Front]), out chunk))
         {
             neighbours.front = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -140,7 +140,7 @@ public struct MeshDataHolder
         else
             neighbours.front = _world.DummyMap;
 
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Top]), out chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Top]), out chunk))
         {
             neighbours.top = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -148,7 +148,7 @@ public struct MeshDataHolder
         else
             neighbours.top = _world.DummyMap;
 
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Bottom]), out chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Bottom]), out chunk))
         {
             neighbours.bottom = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -156,7 +156,7 @@ public struct MeshDataHolder
         else
             neighbours.bottom = _world.DummyMap;
 
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Left]), out chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Left]), out chunk))
         {
             neighbours.left = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -164,7 +164,7 @@ public struct MeshDataHolder
         else
             neighbours.left = _world.DummyMap;
 
-        if (_world.Chunks.TryGetValue(I3ToVI3(_chunkPos + data.FaceChecks[(int)VoxelFaces.Right]), out chunk))
+        if (_world.Chunks.TryGetValue(I3ToVI3(chunkPos + _data.FaceChecks[(int)VoxelFaces.Right]), out chunk))
         {
             neighbours.right = chunk.VoxelMap;
             accesses.Add(chunk.VoxelMapAccess);
@@ -211,7 +211,7 @@ public struct MeshDataHolder
     {
         MeshBuilder.FillVerticesJob fillVerticesJob = new()
         {
-            Data = data,
+            Data = _data,
             AllFaces = _facesData.allFaces.AsArray(),
             Vertices = _meshData.vertices.AsArray(),
         };
@@ -260,8 +260,8 @@ public struct MeshDataHolder
         mesh.Clear();
 
         Bounds bounds = new(
-            new(data.ChunkWidth / 2f, data.ChunkHeight / 2, data.ChunkLength / 2),
-            new(data.ChunkWidth + 1f, data.ChunkHeight + 1f, data.ChunkLength + 1f)
+            new(_data.ChunkWidth / 2f, _data.ChunkHeight / 2, _data.ChunkLength / 2),
+            new(_data.ChunkWidth + 1f, _data.ChunkHeight + 1f, _data.ChunkLength + 1f)
         );
 
         mesh.SetVertexBufferParams(_meshData.vertices.Length, _layout);

@@ -8,12 +8,12 @@ using UnityEngine.InputSystem;
 public class DebugScreen : MonoBehaviour
 {
     public InputActionReference toggleDebug;
-    private World World;
-    private TMP_Text debugText;
-    private Transform debugPanel;
-
-    float frameRate;
-    float timer;
+    private World _world;
+    private TMP_Text _debugText;
+    private Transform _debugPanel;
+    private float _frameRate;
+    private float _timer;
+    private readonly StringBuilder _debug = new();
 
     private void OnEnable()
     {
@@ -28,41 +28,42 @@ public class DebugScreen : MonoBehaviour
 
     private void Start()
     {
-        World = World.Instance;
-        debugPanel = transform.GetChild(0);
-        debugText = debugPanel.GetComponentInChildren<TMP_Text>();
+        _world = ServiceLocator.Get<World>();
+        _debugPanel = transform.GetChild(0);
+        _debugText = _debugPanel.GetComponentInChildren<TMP_Text>();
     }
 
     private void ToggleDebug(InputAction.CallbackContext obj)
     {
-        debugPanel.gameObject.SetActive(!debugPanel.gameObject.activeSelf);
+        _debugPanel.gameObject.SetActive(!_debugPanel.gameObject.activeSelf);
     }
 
     private void Update()
     {
-        if (debugPanel.gameObject.activeSelf)
+        if (_debugPanel.gameObject.activeSelf)
         {
-            //var pPos = World.PlayerObj.transform.position;
+            var pPos = _world.PlayerObj.transform.position;
 
             //StringBuilder debug = new(256);
-            //debug.AppendLine($"Debug Screen");
-            //debug.AppendLine($"World Name: {World.WorldData.WorldName}");
-            //debug.AppendLine($"World Seed: {World.WorldData.Seed}");
-            //debug.AppendLine($"FPS: {frameRate}");
-            //debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
-            //debug.AppendLine($"Chunk: {World.PlayerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
+            _debug.Clear();
+            _debug.AppendLine($"Debug Screen");
+            _debug.AppendLine($"World Name: {_world.WorldData.worldName}");
+            _debug.AppendLine($"World Seed: {_world.WorldData.seed}");
+            _debug.AppendLine($"FPS: {_frameRate}");
+            _debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
+            //debug.AppendLine($"Chunk: {_world.playerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
 
-            //debugText.text = debug.ToString();
+            _debugText.text = _debug.ToString();
         }
 
-        if (timer > 1f)
+        if (_timer > 1f)
         {
-            frameRate = (int)(1f / Time.unscaledDeltaTime);
-            timer = 0f;
+            _frameRate = (int)(1f / Time.unscaledDeltaTime);
+            _timer = 0f;
         }
         else
         {
-            timer += Time.deltaTime;
+            _timer += Time.deltaTime;
         }
     }
 }

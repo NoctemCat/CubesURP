@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,27 +9,63 @@ using MemoryPack;
 using Unity.Mathematics;
 using UnityEngine;
 
+using static CubesUtils;
 public class SaveSystem : MonoBehaviour
 {
-    private World World;
+    //private World World;
+    [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
+    //private EventSystem _eventSystem;
+    private HashSet<Vector3Int> _savedChunks;
+    public HashSet<Vector3Int> SavedChunks => _savedChunks;
     private ChunkDataPool _pool;
 
     public List<Chunk> ChunksToSave { get; private set; }
     public string SaveChunkPath { get; private set; }
+    public string SavedChunksPath { get; private set; }
 
     private float _time;
     private bool _forceSave;
 
     private void Awake()
     {
-        World = World.Instance;
-        _pool = new(World);
-
-        SaveChunkPath = Path.Combine(World.WorldPath, "chunks");
+        _pool = new();
+        SaveChunkPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName, "chunks");
+        SavedChunksPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName, "chunks.saved");
         ChunksToSave = new(20);
+
+        if (File.Exists(SavedChunksPath))
+        {
+            LoadSavedChunks();
+            //LoadedChunks = new(_savedChunks);
+        }
+        else
+        {
+            _savedChunks = new();
+            //LoadedChunks = new();
+        }
 
         _time = 0f;
         _forceSave = false;
+        ServiceLocator.Register(this);
+    }
+
+    private void LoadSavedChunks()
+    {
+        using Stream stream = new FileStream(SavedChunksPath, FileMode.Open, FileAccess.Read);
+        using MemoryStream ms = new();
+
+        stream.CopyTo(ms);
+        MemoryPackSerializer.Deserialize(ms.ToArray(), ref _savedChunks);
+    }
+
+    private void OnDestroy()
+    {
+        WriteToFile(SavedChunksPath, _savedChunks).Forget();
+        ServiceLocator.Unregister(this);
+        for (int i = 0; i < ChunksToSave.Count; i++)
+        {
+            SaveChunk(ChunksToSave[i]);
+        }
     }
 
     private void Start()
@@ -36,10 +73,21 @@ public class SaveSystem : MonoBehaviour
         WatchUpdate(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
+    //private void AddChunkToSaveHandler(EventArgs args)
+    //{
+    //    if (args.eventType != EventType.AddChunkToSave)
+    //        Debug.Log($"Save System AddChunkToSave wrong EventArgs {args.eventType}");
+    //    AddChunkToSave((args as AddChunkToSaveArgs).chunk);
+    //}
+
     public void AddChunkToSave(Chunk chunk)
     {
+        _savedChunks.Add(I3ToVI3(chunk.ChunkPos));
         if (!ChunksToSave.Contains(chunk))
+        {
+            chunk.markedForSave = true;
             ChunksToSave.Add(chunk);
+        }
     }
 
     public void Update()
@@ -56,7 +104,6 @@ public class SaveSystem : MonoBehaviour
     {
         List<UniTask> tasks = new(10);
         List<Chunk> copy = new(10);
-        await UniTask.SwitchToThreadPool();
         while (true)
         {
             bool isCalncelled = await UniTask.WaitUntil(() => { return _time > 4f || _forceSave; }, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
@@ -66,8 +113,9 @@ public class SaveSystem : MonoBehaviour
 
             if (ChunksToSave.Count > 0)
             {
-                for (int i = 0; i < ChunksToSave.Count; i++)
-                    copy.Add(ChunksToSave[i]);
+                WriteToFile(SavedChunksPath, _savedChunks).Forget();
+
+                copy.AddRange(ChunksToSave);
                 ChunksToSave.Clear();
 
                 for (int i = 0; i < copy.Count; i++)
@@ -85,9 +133,9 @@ public class SaveSystem : MonoBehaviour
 
     public async UniTask SaveChunkAsync(Chunk chunk)
     {
+        await UniTask.SwitchToThreadPool();
 
         Directory.CreateDirectory(SaveChunkPath);
-
         ChunkData chunkData = _pool.Get();
 
         chunkData.x = chunk.ChunkPos.x;
@@ -102,21 +150,24 @@ public class SaveSystem : MonoBehaviour
         {
             chunkData.NeighbourModifications.Add(chunk.NeighbourModifications[i]);
         }
+        chunk.FinishedSaving();
 
-        using Stream stream = new FileStream(PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName), FileMode.Create, FileAccess.Write);
-        await MemoryPackSerializer.SerializeAsync(stream, chunkData);
+        await WriteToFile(PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName), chunkData);
 
         _pool.Reclaim(chunkData);
-
     }
 
+    HashSet<Vector3Int> _loadedChunks = new();
     /// <summary>
     /// File must exist
     /// </summary>
     /// <param name="chunkName"></param>
     /// <returns>UniTask with chunk data</returns>
-    public async UniTask<ChunkData> LoadChunkAsync(string chunkName)
+    public async UniTask<ChunkData> LoadChunkAsync(Vector3Int chunkPos, string chunkName)
     {
+        if (_loadedChunks.Contains(chunkPos)) return null;
+        _loadedChunks.Add(chunkPos);
+
         ChunkData chunkData = _pool.Get();
         await UniTask.SwitchToThreadPool();
 
@@ -136,38 +187,34 @@ public class SaveSystem : MonoBehaviour
         _pool.Reclaim(data);
     }
 
-
-    public void OnDestroyForceSave()
-    {
-        for (int i = 0; i < ChunksToSave.Count; i++)
-        {
-            SaveChunk(ChunksToSave[i]);
-        }
-    }
-
     public void SaveChunk(Chunk chunk)
     {
-        if (chunk.IsDisposed) return;
-
+        string chunkPath = PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName);
         Directory.CreateDirectory(SaveChunkPath);
 
-        ChunkData chunkData = new()
-        {
-            x = chunk.ChunkPos.x,
-            y = chunk.ChunkPos.y,
-            z = chunk.ChunkPos.z,
-            VoxelMap = new Block[World.VoxelData.ChunkSize],
-            NeighbourModifications = new(chunk.NeighbourModifications.Length)
-        };
+        ChunkData chunkData = _pool.Get();
 
+        chunkData.x = chunk.ChunkPos.x;
+        chunkData.y = chunk.ChunkPos.y;
+        chunkData.z = chunk.ChunkPos.z;
         chunk.VoxelMap.CopyTo(chunkData.VoxelMap);
         for (int i = 0; i < chunk.NeighbourModifications.Length; i++)
         {
             chunkData.NeighbourModifications.Add(chunk.NeighbourModifications[i]);
         }
+        chunk.FinishedSaving();
 
-        using Stream stream = new FileStream(PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName), FileMode.Create, FileAccess.Write);
-        _ = MemoryPackSerializer.SerializeAsync(stream, chunkData);
+        WriteToFile(chunkPath, chunkData).Forget();
+    }
+
+    private async UniTask WriteToFile<T>(string chunkPath, T data)
+    {
+        Stream stream = new FileStream(chunkPath, FileMode.Create, FileAccess.Write);
+        await MemoryPackSerializer.SerializeAsync(stream, data);
+
+        stream.Flush();
+        stream.Close();
+        stream.Dispose();
     }
 }
 
@@ -186,45 +233,44 @@ public partial class ChunkData
 
 public class ChunkDataPool
 {
-    private readonly World World;
-    private readonly List<ChunkData> _datas;
+    private readonly ConcurrentQueue<ChunkData> _datas;
 
-    public ChunkDataPool(World world)
+    public ChunkDataPool()
     {
-        World = world;
-        _datas = new List<ChunkData>(5);
+        _datas = new();
     }
 
     public void AddToPool(int add = 5)
     {
-        _datas.Capacity += add;
         for (int i = 0; i < add; i++)
+            _datas.Enqueue(Construct());
+    }
+
+    private ChunkData Construct()
+    {
+        return new()
         {
-            ChunkData data = new()
-            {
-                x = 0,
-                y = 0,
-                z = 0,
-                VoxelMap = new Block[World.VoxelData.ChunkSize],
-                NeighbourModifications = new()
-            };
-            _datas.Add(data);
-        }
+            x = 0,
+            y = 0,
+            z = 0,
+            VoxelMap = new Block[VoxelDataStatic.ChunkSize],
+            NeighbourModifications = new()
+        };
     }
 
     public ChunkData Get()
     {
-        if (_datas.Count <= 1)
+        if (_datas.IsEmpty)
             AddToPool();
 
-        ChunkData data = _datas[^1];
-        _datas.RemoveAt(_datas.Count - 1);
-        return data;
+        if (_datas.TryDequeue(out ChunkData data)) { return data; }
+        return Construct();
     }
 
     public void Reclaim(ChunkData data)
     {
-        _datas.Add(data);
+        data.NeighbourModifications.Clear();
+        _datas.Enqueue(data);
     }
 }
 

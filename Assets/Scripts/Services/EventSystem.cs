@@ -6,7 +6,13 @@ public enum EventType
 {
     PauseGame,
     ResumeGame,
-    DropItems
+    DropItems,
+    Structures_AddStructuresToSort,
+    Chunk_AddSortedStructures,
+    PlayerChunkChanged,
+    AddChunkToSave,
+    EnableCreative,
+    DisableCreative,
 }
 
 public class EventArgs
@@ -24,13 +30,22 @@ public class DropItemsArgs : EventArgs
     public DropItemsArgs() => eventType = EventType.DropItems;
 }
 
+public class PlayerChunkChangedArgs : EventArgs
+{
+    public Vector3Int newChunkPos;
+    public PlayerChunkChangedArgs() => eventType = EventType.PlayerChunkChanged;
+}
+
+
+public delegate void EventHandler(in EventArgs args);
+
 public class EventSystem
 {
-    private readonly Dictionary<EventType, Action<EventArgs>> _eventDictionary = new();
+    private readonly Dictionary<EventType, EventHandler> _eventDictionary = new();
 
-    public void StartListening(EventType eventType, Action<EventArgs> listener)
+    public void StartListening(EventType eventType, EventHandler listener)
     {
-        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        if (_eventDictionary.TryGetValue(eventType, out EventHandler thisEvent))
         {
             thisEvent += listener;
             _eventDictionary[eventType] = thisEvent;
@@ -42,20 +57,20 @@ public class EventSystem
         }
     }
 
-    public void StopListening(EventType eventType, Action<EventArgs> listener)
+    public void StopListening(EventType eventType, EventHandler listener)
     {
-        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        if (_eventDictionary.TryGetValue(eventType, out EventHandler thisEvent))
         {
             thisEvent -= listener;
             _eventDictionary[eventType] = thisEvent;
         }
     }
 
-    public void TriggerEvent(EventType eventType, EventArgs args = null)
+    public void TriggerEvent(EventType eventType, in EventArgs args = null)
     {
-        if (_eventDictionary.TryGetValue(eventType, out Action<EventArgs> thisEvent))
+        if (_eventDictionary.TryGetValue(eventType, out EventHandler thisEvent))
         {
-            args ??= new() { eventType = eventType };
+            //args ??= new() { eventType = eventType };
             thisEvent.Invoke(args);
         }
     }

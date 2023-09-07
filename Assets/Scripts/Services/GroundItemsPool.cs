@@ -18,6 +18,7 @@ public class GroundItemsPool : MonoBehaviour
     private void OnDestroy()
     {
         ServiceLocator.Unregister(this);
+        _eventSystem.StopListening(EventType.DropItems, DropItems);
     }
 
     private void Start()
@@ -29,9 +30,6 @@ public class GroundItemsPool : MonoBehaviour
         AddToPool(amountToPool);
     }
 
-    private void Update()
-    {
-    }
 
     public void AddToPool(int num)
     {
@@ -60,7 +58,7 @@ public class GroundItemsPool : MonoBehaviour
         return GetPooledObject();
     }
 
-    public void DropItems(EventArgs eventArgs)
+    public void DropItems(in EventArgs eventArgs)
     {
         DropItemsArgs args = (DropItemsArgs)eventArgs;
         GameObject item = GetPooledObject();

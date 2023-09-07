@@ -10,6 +10,7 @@ public static class RegisterServices
         ServiceLocator.Register(new EventSystem());
 
         ItemDatabaseObject itemDatabase = Resources.Load<ItemDatabaseObject>("Data/Database");
+        itemDatabase.UpdateID();
         ServiceLocator.Register(itemDatabase);
     }
 }

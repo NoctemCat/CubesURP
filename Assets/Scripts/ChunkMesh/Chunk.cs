@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+
+//using System.ComponentModel;
+//using System.Threading;
 using Cysharp.Threading.Tasks;
 using MemoryPack;
 using Unity.Burst;
@@ -16,16 +20,19 @@ using static CubesUtils;
 
 public class Chunk
 {
-    private GameObject _chunkObject;
-    private MeshRenderer _meshRenderer;
-    private MeshFilter _meshFilter;
-    private Mesh _chunkMesh;
-    private Material[] _materials = new Material[2];
+    private readonly GameObject _chunkObject;
+    private readonly MeshRenderer _meshRenderer;
+    private readonly MeshFilter _meshFilter;
+    private readonly Mesh _chunkMesh;
+    private readonly Material[] _materials = new Material[2];
     public string ChunkName { get; private set; }
     public int3 ChunkPos { get; private set; }
     public Vector3 WorldPos { get; private set; }
 
     private readonly World _world;
+    private readonly MeshDataPool _meshDataPool;
+    private readonly EventSystem _eventSystem;
+    private readonly StructureSystem _structureSystem;
     private VoxelData _data;
 
     public NativeArray<Block> VoxelMap { get; private set; }
@@ -38,9 +45,10 @@ public class Chunk
     private bool _voxelMapGenerated;
     private bool _isGeneratingMesh;
     private bool _dirtyMesh;
+    public bool markedForSave = false;
     public bool IsDisposed { get; private set; }
 
-    private bool _requestingStop;
+    private CancellationTokenSource _ctsStopMeshGen = null;
     private bool _isActive;
     public bool IsActive
     {
@@ -49,7 +57,8 @@ public class Chunk
         {
             _isActive = value;
             _chunkObject.SetActive(value);
-            _requestingStop = !value;
+            if (value == false)
+                _ctsStopMeshGen?.Cancel();
         }
     }
 
@@ -57,56 +66,17 @@ public class Chunk
     public JobHandle VoxelMapAccess { get; private set; }
     private Action _initActions;
 
-    public Chunk(Vector3Int chunkPos)
+    private Chunk()
     {
-        _world = World.Instance;
-        Init(chunkPos);
-        _isLoaded = false;
+        _world = ServiceLocator.Get<World>();
+        _meshDataPool = ServiceLocator.Get<MeshDataPool>();
+        _structureSystem = ServiceLocator.Get<StructureSystem>();
+        _eventSystem = ServiceLocator.Get<EventSystem>();
 
-        StartGenerating().Forget();
-    }
-    public Chunk(ChunkData chunkData)
-    {
-        _world = World.Instance;
-        Init(chunkData.ChunkPos);
-        _isLoaded = true;
-
-        //StartGenerating().Forget();
-
-        //chunkData.VoxelMap.
-        VoxelMap.CopyFrom(chunkData.VoxelMap);
-        NeighbourModifications.CopyFromNBC(chunkData.NeighbourModifications.ToArray());
-        //NeighbourModifications.AddRangeNoResize()
-
-        _voxelMapGenerated = true;
-        _dirtyMesh = true;
-
-        _world.CheckNeighbours(this);
-        if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
-        {
-            _initActions -= CheckNeighbours;
-        }
-    }
-
-    private void Init(Vector3Int chunkPos)
-    {
         _initActions += CheckNeighbours;
         _initActions += AddStructuresToWorld;
 
         _data = _world.VoxelData;
-        ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
-        WorldPos = new(chunkPos.x * _data.ChunkWidth, chunkPos.y * _data.ChunkHeight, chunkPos.z * _data.ChunkLength);
-
-        //WorldPoints = new Vector3[9];
-        //WorldPoints[0] = WorldPos;
-        //WorldPoints[1] = WorldPos + new Vector3(Data.ChunkWidth + 1f, 0f, 0f);
-        //WorldPoints[2] = WorldPos + new Vector3(0f, 0f, Data.ChunkLength + 1f);
-        //WorldPoints[3] = WorldPos + new Vector3(Data.ChunkWidth + 1f, 0f, Data.ChunkLength + 1f);
-        //WorldPoints[4] = WorldPos + new Vector3(0f, Data.ChunkHeight + 1f, 0f);
-        //WorldPoints[5] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, 0f);
-        //WorldPoints[6] = WorldPos + new Vector3(0f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
-        //WorldPoints[7] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
-        //WorldPoints[8] = WorldPos + new Vector3(Data.ChunkWidth + 1f / 2f, Data.ChunkHeight + 1f / 2f, Data.ChunkLength + 1f / 2f);
 
         VoxelMap = new(_data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
@@ -115,7 +85,7 @@ public class Chunk
 
         _voxelMapGenerated = false;
         _isGeneratingMesh = false;
-        _requestingStop = false;
+        //_requestingStop = false;
 
         IsDisposed = false;
         _dirtyMesh = false;
@@ -130,9 +100,6 @@ public class Chunk
         _meshRenderer.materials = _materials;
 
         _chunkObject.transform.SetParent(_world.transform);
-        _chunkObject.transform.position = WorldPos;
-        _chunkObject.name = PathHelper.GenerateChunkName(ChunkPos);
-        ChunkName = _chunkObject.name;
 
         _chunkMesh = new Mesh()
         {
@@ -142,17 +109,117 @@ public class Chunk
         _meshFilter.mesh = _chunkMesh;
 
         IsActive = true;
+        _holder = new();
+
+        _eventSystem.StartListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
     }
+
+    public Chunk(Vector3Int chunkPos) : this()
+    {
+        ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
+        WorldPos = new(chunkPos.x * _data.ChunkWidth, chunkPos.y * _data.ChunkHeight, chunkPos.z * _data.ChunkLength);
+        _chunkObject.transform.position = WorldPos;
+        _chunkObject.name = PathHelper.GenerateChunkName(ChunkPos);
+        ChunkName = _chunkObject.name;
+        _isLoaded = false;
+
+        StartGenerating().Forget();
+    }
+    public Chunk(ChunkData chunkData) : this()
+    {
+        Vector3Int chunkPos = chunkData.ChunkPos;
+        ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
+        WorldPos = new(chunkPos.x * _data.ChunkWidth, chunkPos.y * _data.ChunkHeight, chunkPos.z * _data.ChunkLength);
+        _chunkObject.transform.position = WorldPos;
+        _chunkObject.name = PathHelper.GenerateChunkName(ChunkPos);
+        ChunkName = _chunkObject.name;
+        _isLoaded = true;
+
+        VoxelMap.CopyFrom(chunkData.VoxelMap);
+        NeighbourModifications.CopyFromNBC(chunkData.NeighbourModifications.ToArray());
+
+        _voxelMapGenerated = true;
+        _dirtyMesh = true;
+
+        _world.CheckNeighbours(this);
+        if ((NeighboursGenerated & VoxelFlags.All) == VoxelFlags.All)
+        {
+            _initActions -= CheckNeighbours;
+        }
+    }
+
+    private void PlayerChunkChanged(in EventArgs args)
+    {
+        if (args.eventType != EventType.PlayerChunkChanged)
+            Debug.Log("World PlayerChunkChanged listener wrong EventArgs");
+
+        var playerChunk = (args as PlayerChunkChangedArgs).newChunkPos;
+
+        Vector3Int viewChunkPos = I3ToVI3(ChunkPos) - playerChunk;
+        if (ChunkInsideViewDistance(viewChunkPos))
+        {
+            IsActive = true;
+        }
+        else if (ChunkOutsideDisposeDistance(viewChunkPos))
+        {
+            if (_world.Chunks.ContainsKey(viewChunkPos))
+            {
+                _world.Chunks.Remove(I3ToVI3(ChunkPos));
+                Dispose();
+            }
+        }
+        else
+        {
+            IsActive = false;
+        }
+    }
+
+    private bool ChunkInsideViewDistance(Vector3Int viewChunkPos)
+    {
+        return viewChunkPos.x >= -_world.Settings.viewDistance && viewChunkPos.x <= _world.Settings.viewDistance &&
+            viewChunkPos.y >= -_world.Settings.viewDistance && viewChunkPos.y <= _world.Settings.viewDistance &&
+            viewChunkPos.z >= -_world.Settings.viewDistance && viewChunkPos.z <= _world.Settings.viewDistance;
+    }
+    private bool ChunkOutsideDisposeDistance(Vector3Int viewChunkPos)
+    {
+        return viewChunkPos.x < -_world.Settings.viewDistance - 2 || viewChunkPos.x > _world.Settings.viewDistance + 2 ||
+            viewChunkPos.y < -_world.Settings.viewDistance - 2 || viewChunkPos.y > _world.Settings.viewDistance + 2 ||
+            viewChunkPos.z < -_world.Settings.viewDistance - 2 || viewChunkPos.z > _world.Settings.viewDistance + 2;
+    }
+
+    //WorldPoints = new Vector3[9];
+    //WorldPoints[0] = WorldPos;
+    //WorldPoints[1] = WorldPos + new Vector3(Data.ChunkWidth + 1f, 0f, 0f);
+    //WorldPoints[2] = WorldPos + new Vector3(0f, 0f, Data.ChunkLength + 1f);
+    //WorldPoints[3] = WorldPos + new Vector3(Data.ChunkWidth + 1f, 0f, Data.ChunkLength + 1f);
+    //WorldPoints[4] = WorldPos + new Vector3(0f, Data.ChunkHeight + 1f, 0f);
+    //WorldPoints[5] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, 0f);
+    //WorldPoints[6] = WorldPos + new Vector3(0f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
+    //WorldPoints[7] = WorldPos + new Vector3(Data.ChunkWidth + 1f, Data.ChunkHeight + 1f, Data.ChunkLength + 1f);
+    //WorldPoints[8] = WorldPos + new Vector3(Data.ChunkWidth + 1f / 2f, Data.ChunkHeight + 1f / 2f, Data.ChunkLength + 1f / 2f);
 
     ~Chunk()
     {
+        if (!IsDisposed)
+            Dispose();
+    }
+
+    private void Deactivate()
+    {
+        if (IsDisposed) return;
+
+        _eventSystem.StopListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+        IsActive = false;
+        IsDisposed = true;
+        VoxelMapAccess.Complete();
     }
 
     public void Dispose()
     {
-        IsActive = false;
-        IsDisposed = true;
-        VoxelMapAccess.Complete();
+        Deactivate();
+        if (markedForSave)
+            return;
+
         for (VoxelFaces i = 0; i < VoxelFaces.Max; i++)
         {
             if (_world.Chunks.TryGetValue(I3ToVI3(ChunkPos + _data.FaceChecks[(int)i]), out Chunk chunk))
@@ -165,6 +232,13 @@ public class Chunk
         UnityEngine.Object.Destroy(_chunkMesh);
         UnityEngine.Object.Destroy(_chunkObject);
         VoxelMap.Dispose();
+    }
+
+    public void FinishedSaving()
+    {
+        markedForSave = false;
+        if (IsDisposed)
+            Dispose();
     }
 
     public void CheckNeighbours()
@@ -184,24 +258,14 @@ public class Chunk
 
         if (NeighbourModifications.Length > 0)
         {
-            _world.StructureSystem.AddStructures(NeighbourModifications);
+            _structureSystem.AddStructuresToSort(NeighbourModifications);
         }
     }
 
     public void Update()
     {
-        //if (_isDisposed) return;
-
         _initActions?.Invoke();
 
-        //if (Input.GetKeyDown(KeyCode.LeftAlt))
-        //{
-        //    SaveVoxelMap().Forget();
-        //}
-        //if (Input.GetKeyDown(KeyCode.Tab))
-        //{
-        //    LoadVoxelMapNorm();
-        //}
         if (_modifications.Length > 0 && !_isGeneratingMesh)
         {
             _dirtyMesh = true;
@@ -211,11 +275,6 @@ public class Chunk
         {
             StartMeshGen().Forget();
         }
-
-        if (_requestingStop && !_isGeneratingMesh)
-        {
-            _requestingStop = false;
-        }
     }
 
     public void AddNeighbours(VoxelFlags neighbours)
@@ -223,10 +282,8 @@ public class Chunk
         NeighboursGenerated |= neighbours;
     }
 
-
     public async UniTaskVoid AddModification(VoxelMod mod)
     {
-        //_safeDelete = true;
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
         _modifications.Add(mod);
@@ -236,7 +293,7 @@ public class Chunk
     public async UniTask AddRangeModification(List<VoxelMod> mod)
     {
         if (_isLoaded) return;
-        //Debug.Log(mod.Count);
+
         await VoxelMapAccess;
         VoxelMapAccess.Complete();
         if (IsDisposed) return;
@@ -269,20 +326,24 @@ public class Chunk
     private async UniTaskVoid StartMeshGen()
     {
         _isGeneratingMesh = true;
-        _holder.Init(ChunkPos);
 
-        var isFinished = await GenerateMesh();
+        //MeshDataHolder holder = _meshDataPool.Get();
+        //holder.chunkPos = ChunkPos;
+        _holder.Init();
+        _holder.chunkPos = ChunkPos;
+        _ctsStopMeshGen = new();
+
+        var isFinished = await GenerateMesh(_holder, _ctsStopMeshGen.Token);
         if (isFinished)
         {
             _dirtyMesh = false;
             _world.ChunkCreated(this);
         }
-        else
-        {
-            _requestingStop = false;
-        }
 
+        _ctsStopMeshGen.Dispose();
+        _ctsStopMeshGen = null;
         _holder.Dispose();
+        //_meshDataPool.Reclaim(holder);
         _isGeneratingMesh = false;
     }
 
@@ -298,6 +359,7 @@ public class Chunk
             VoxelMap = VoxelMap,
             Structures = _structures.AsParallelWriter(),
         };
+        JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
 
         BuildStructuresJob buildStructures = new()
         {
@@ -310,36 +372,35 @@ public class Chunk
             NeighbourModifications = NeighbourModifications.AsParallelWriter(),
         };
 
-        JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
         JobHandle structuresHandle = buildStructures.Schedule(_structures, 8, generateHandle);
 
         return structuresHandle;
     }
 
-    async UniTask<bool> GenerateMesh()
+    async UniTask<bool> GenerateMesh(MeshDataHolder holder, CancellationToken token)
     {
         if (_modifications.Length > 0)
             ApplyMods();
 
-        VoxelMapAccess = _holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
+        VoxelMapAccess = holder.CountBlockTypes(VoxelMapAccess, VoxelMap);
 
         await VoxelMapAccess;
-        if (_requestingStop) return false;
-        if (_holder.IsEmpty) return true;
-        _holder.ResizeFacesData();
+        if (token.IsCancellationRequested) return false;
+        if (holder.IsEmpty) return true;
+        holder.ResizeFacesData();
 
-        VoxelMapAccess = _holder.SortVoxels(VoxelMapAccess, VoxelMap);
+        VoxelMapAccess = holder.SortVoxels(VoxelMapAccess, VoxelMap);
         await VoxelMapAccess;
 
-        if (_requestingStop) return false;
+        if (token.IsCancellationRequested) return false;
 
-        _holder.ResizeMeshData();
+        holder.ResizeMeshData();
 
-        await _holder.FillMeshData();
+        await holder.FillMeshData();
 
-        if (_requestingStop) return false;
+        if (token.IsCancellationRequested) return false;
 
-        _holder.BuildMesh(_chunkMesh);
+        holder.BuildMesh(_chunkMesh);
 
         return true;
     }

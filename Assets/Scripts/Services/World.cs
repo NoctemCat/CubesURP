@@ -17,7 +17,6 @@ using static CubesUtils;
 
 public class World : MonoBehaviour
 {
-    public static World Instance { get; private set; }
     [field: SerializeField] public Settings Settings { get; private set; }
 
     public VoxelData VoxelData { get; private set; }
@@ -25,7 +24,6 @@ public class World : MonoBehaviour
     public NativeArray<BlockStruct> NativeBlocks { get; private set; }
     public NativeArray<int3> XYZMap { get; private set; }
     public NativeArray<BiomeStruct> Biomes { get; private set; }
-    //public float3 RandomXYZ { get; private set; }
 
     [SerializeField] private BiomeAttributes[] _biomeScObjs;
     [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
@@ -34,46 +32,29 @@ public class World : MonoBehaviour
 
     public GameObject PlayerObj;
 
-
     public Dictionary<Vector3Int, Chunk> Chunks { get; private set; }
     public NativeArray<Block> DummyMap { get; private set; }
 
-    public StructureSystem StructureSystem { get; private set; }
+    //public StructureSystem StructureSystem { get; private set; }
     public SaveSystem SaveSystem { get; private set; }
 
     List<Vector3Int> ViewCoords;
-
     List<Chunk> ActiveChunks;
-    List<Chunk> DisposedChunks;
-
-    public Vector3Int PlayerChunk;
-    private bool _refreshDistance;
-
-    public string WorldPath { get; private set; }
 
     private EventSystem _eventSystem;
 
     private void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(Instance);
-
-        WorldPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName);
-
+        ServiceLocator.Register(this);
         LoadSettings();
 
         _eventSystem = ServiceLocator.Get<EventSystem>();
-        _eventSystem.StartListening(EventType.ResumeGame, LoadSettingsHandler);
-
-        _refreshDistance = false;
+        var itemDatabase = ServiceLocator.Get<ItemDatabaseObject>();
 
         Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.seed.GetHashCode(), 0)));
         float3 randomXYZ = rng.NextFloat3() * 10000;
 
         VoxelData = new(randomXYZ);
-        var itemDatabase = ServiceLocator.Get<ItemDatabaseObject>();
 
         Blocks = WorldHelper.InitBlocksMapping(itemDatabase);
         NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
@@ -86,41 +67,95 @@ public class World : MonoBehaviour
         }
         Biomes = biomesTemp;
 
-        //Debug.Log(Settings.ViewDistance);
-
         Chunks = new(ViewCoords.Count);
-        //ChunkMap = new(ViewCoords.Count, Allocator.Persistent);
         DummyMap = new(VoxelData.ChunkSize, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         ActiveChunks = new(10);
-        DisposedChunks = new(20);
 
         PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 50f, VoxelData.ChunkLength / 2);
 
-        //LastPlayerChunk = new(-1000, -1000, -1000);
-        PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+        ServiceLocator.Register(new MeshDataPool());
+    }
 
-        StructureSystem = GetComponent<StructureSystem>();
-        SaveSystem = GetComponent<SaveSystem>();
+    private void OnEnable()
+    {
+        _eventSystem.StartListening(EventType.ResumeGame, LoadSettingsHandler);
+        _eventSystem.StartListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
+        _eventSystem.StartListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+    }
+
+    private void OnDisable()
+    {
+        _eventSystem.StopListening(EventType.ResumeGame, LoadSettingsHandler);
+        _eventSystem.StopListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
+        _eventSystem.StopListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+    }
+
+    private void AddSortedStructures(in EventArgs args)
+    {
+        if (args.eventType != EventType.Chunk_AddSortedStructures)
+            Debug.Log($"World AddSortedStructures wrong event type {args.eventType}");
+
+        var parsedArgs = (AddSortedStructuresArgs)args;
+        Chunk chunk;
+        if (Chunks.ContainsKey(parsedArgs.chunkPos))
+        {
+            chunk = Chunks[parsedArgs.chunkPos];
+        }
+        else
+        {
+            chunk = new(parsedArgs.chunkPos);
+            Chunks[parsedArgs.chunkPos] = chunk;
+        }
+        chunk.AddRangeModification(parsedArgs.structures).Forget();
+    }
+
+    private CancellationTokenSource _cts;
+    private bool _generatingChunks = false;
+    private Vector3Int _playerChunk;
+    private void PlayerChunkChanged(in EventArgs args)
+    {
+        if (args.eventType != EventType.PlayerChunkChanged)
+            Debug.Log("World PlayerChunkChanged listener wrong EventArgs");
+
+        var playerChunk = (args as PlayerChunkChangedArgs).newChunkPos;
+        _playerChunk = playerChunk;
+        ActiveChunks.Clear();
+
+        if (_generatingChunks)
+        {
+            //_cts.Cancel();
+            //_cts.Dispose();
+            //_cts = null;
+            //_generatingChunks = false;
+            return;
+        }
+
+        //_cts = new();
+        CheckDistanceNew(this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    async UniTaskVoid CheckDistanceNew(CancellationToken token)
+    {
+        _generatingChunks = true;
+
+        while (!GenerateVoxelMaps())
+        {
+            bool isCalncelled = await UniTask.WaitForSeconds(Settings.timeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
+            if (isCalncelled) return;
+        }
+        _generatingChunks = false;
     }
 
     private void Start()
     {
-        CheckDistance(this.GetCancellationTokenOnDestroy()).Forget();
-        CheckDisposeChunks(this.GetCancellationTokenOnDestroy()).Forget();
+        SaveSystem = ServiceLocator.Get<SaveSystem>();
     }
-
-    //private async UniTaskVoid Test(CancellationToken cancellationToken)
-    //{
-    //    //cancellationToken.IsCancellationRequested
-    //    //CheckDistance()
-    //}
 
     private void OnDestroy()
     {
-        _eventSystem.StopListening(EventType.ResumeGame, LoadSettingsHandler);
+        ServiceLocator.Unregister(this);
 
-        SaveSystem.OnDestroyForceSave();
         foreach (var kvp in Chunks)
         {
             kvp.Value.Dispose();
@@ -133,21 +168,19 @@ public class World : MonoBehaviour
             Biomes[i].Dispose();
         }
         Biomes.Dispose();
-
         DummyMap.Dispose();
 
+        ServiceLocator.Get<MeshDataPool>().Dispose();
         VoxelData.Dispose();
-        Destroy(Instance);
     }
 
-    public void LoadSettingsHandler(EventArgs _) => LoadSettings();
+    public void LoadSettingsHandler(in EventArgs _) => LoadSettings();
     public void LoadSettings()
     {
         if (File.Exists($"{Application.dataPath}/settings.cfg"))
         {
             string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
             Settings = JsonUtility.FromJson<Settings>(loadSettings);
-            _refreshDistance = true;
         }
         else
         {
@@ -201,7 +234,7 @@ public class World : MonoBehaviour
     //float timerGarbage = 0f;
     private void Update()
     {
-        PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+        //PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
         _results.Clear();
 
         for (int i = 0; i < ActiveChunks.Count; i++)
@@ -230,120 +263,31 @@ public class World : MonoBehaviour
     //    return false;
     //}
 
-    async UniTaskVoid CheckDisposeChunks(CancellationToken token)
-    {
-        List<Vector3Int> toRemove = new();
-        while (true)
-        {
-            foreach (var kvp in Chunks)
-            {
-                Vector3Int viewChunkPos = kvp.Key - PlayerChunk;
-                if (
-                    viewChunkPos.x < -Settings.viewDistance - 2 || viewChunkPos.x > Settings.viewDistance + 2 ||
-                    viewChunkPos.y < -Settings.viewDistance - 2 || viewChunkPos.y > Settings.viewDistance + 2 ||
-                    viewChunkPos.z < -Settings.viewDistance - 2 || viewChunkPos.z > Settings.viewDistance + 2
-                )
-                {
-                    //chunk.Dispose();
-                    DisposedChunks.Add(kvp.Value);
-                    toRemove.Add(kvp.Key);
-
-                    int i = ActiveChunks.IndexOf(kvp.Value);
-                    if (i != -1)
-                        ActiveChunks.RemoveAt(i);
-                }
-            }
-            for (int i = 0; i < toRemove.Count; i++)
-            {
-                Chunks.Remove(toRemove[i]);
-            }
-            toRemove.Clear();
-
-            bool isCalncelled = await UniTask.WaitForSeconds(4f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
-            DisposeChunks();
-            if (isCalncelled) return;
-
-            isCalncelled = await UniTask.WaitForSeconds(2f, true, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
-            if (isCalncelled) return;
-        }
-    }
-
-    void DisposeChunks()
-    {
-        //await UniTask.WaitForSeconds(4f);
-        for (int i = 0; i < DisposedChunks.Count; i++)
-        {
-            DisposedChunks[i].Dispose();
-        }
-        DisposedChunks.Clear();
-
-        //GC.Collect();
-        //GC.WaitForPendingFinalizers();
-    }
-
-    async UniTask CheckDistance(CancellationToken token)
-    {
-        Vector3Int LastPlayerChunk;
-        bool isCalncelled = false;
-
-        while (true)
-        {
-            LastPlayerChunk = PlayerChunk;
-            while (
-                DeactivateFarChunks() &&
-                !GenerateVoxelMaps()
-            )
-            {
-                LastPlayerChunk = PlayerChunk;
-                isCalncelled = await UniTask.WaitForSeconds(Settings.timeBetweenGenerating, false, PlayerLoopTiming.Initialization, token).SuppressCancellationThrow();
-                if (isCalncelled) return;
-            }
-
-            Debug.Log("All");
-            isCalncelled = await UniTask.WaitUntil(() => PlayerChunk != LastPlayerChunk || _refreshDistance, PlayerLoopTiming.EarlyUpdate, token).SuppressCancellationThrow();
-            if (isCalncelled) return;
-            _refreshDistance = false;
-        }
-    }
-
-    bool DeactivateFarChunks()
-    {
-        for (int i = 0; i < ActiveChunks.Count; i++)
-        {
-            Vector3Int viewChunkPos = I3ToVI3(ActiveChunks[i].ChunkPos) - PlayerChunk;
-            if (
-                viewChunkPos.x < -Settings.viewDistance || viewChunkPos.x > Settings.viewDistance ||
-                viewChunkPos.y < -Settings.viewDistance || viewChunkPos.y > Settings.viewDistance ||
-                viewChunkPos.z < -Settings.viewDistance || viewChunkPos.z > Settings.viewDistance
-            )
-            {
-                ActiveChunks[i].IsActive = false;
-            }
-        }
-        ActiveChunks.Clear();
-        return true;
-    }
-
     bool GenerateVoxelMaps()
     {
         bool allGenerated = true;
         int toGenerate = Settings.generateAtOnce;
-
         for (int i = 0; i < ViewCoords.Count; i++)
         {
-            Vector3Int checkCoord = PlayerChunk + ViewCoords[i];
+            Vector3Int checkCoord = _playerChunk + ViewCoords[i];
             if (Chunks.ContainsKey(checkCoord)) continue;
 
-            string chunkName = PathHelper.GenerateChunkName(checkCoord);
-            if (CheckChunkFile(chunkName))
+            if (SaveSystem.SavedChunks.Contains(checkCoord))
             {
-                SaveSystem.LoadChunkAsync(chunkName).ContinueWith(chunkData =>
+                //SaveSystem.LoadedChunks.Remove(checkCoord);
+                string chunkName = PathHelper.GenerateChunkName(checkCoord);
+                if (CheckChunkFile(chunkName))
                 {
-                    var chunk = new Chunk(chunkData);
-                    Chunks[checkCoord] = chunk;
+                    SaveSystem.LoadChunkAsync(checkCoord, chunkName).ContinueWith(chunkData =>
+                    {
+                        if (chunkData is null) return;
 
-                    SaveSystem.ReclaimData(chunkData);
-                });
+                        var chunk = new Chunk(chunkData);
+                        Chunks[checkCoord] = chunk;
+
+                        SaveSystem.ReclaimData(chunkData);
+                    });
+                }
             }
             else
             {
@@ -383,7 +327,7 @@ public class World : MonoBehaviour
     {
         for (int i = 0; i < ViewCoords.Count; i++)
         {
-            Vector3Int checkCoord = PlayerChunk + ViewCoords[i];
+            Vector3Int checkCoord = _playerChunk + ViewCoords[i];
             if (Chunks.TryGetValue(checkCoord, out var chunk))
             {
                 if (!chunk.IsActive)
@@ -450,9 +394,9 @@ public class World : MonoBehaviour
 
     public Vector3Int GetChunkCoordFromVector3(Vector3 pos)
     {
-        int x = Mathf.FloorToInt(pos.x / VoxelData.ChunkWidth);
-        int y = Mathf.FloorToInt(pos.y / VoxelData.ChunkHeight);
-        int z = Mathf.FloorToInt(pos.z / VoxelData.ChunkLength);
+        int x = Mathf.FloorToInt(pos.x / VoxelDataStatic.ChunkWidth);
+        int y = Mathf.FloorToInt(pos.y / VoxelDataStatic.ChunkHeight);
+        int z = Mathf.FloorToInt(pos.z / VoxelDataStatic.ChunkLength);
         return new(x, y, z);
     }
 
@@ -476,17 +420,6 @@ public class World : MonoBehaviour
         int y = (int)(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
         int z = (int)(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
         return new(x, y, z);
-    }
-
-    public void GetAccessForPlayer()
-    {
-        for (VoxelFaces f = VoxelFaces.Back; f < VoxelFaces.Max; f++)
-        {
-            if (Chunks.TryGetValue(PlayerChunk + I3ToVI3(VoxelData.FaceChecks[(int)f]), out Chunk chunk))
-            {
-                chunk.VoxelMapAccess.Complete();
-            }
-        }
     }
 
     private readonly Dictionary<Vector3, bool> _results = new();
@@ -533,8 +466,6 @@ public class World : MonoBehaviour
     }
 
     private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
-
-
 }
 
 [Serializable]

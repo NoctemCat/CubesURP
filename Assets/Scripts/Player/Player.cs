@@ -7,12 +7,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+using static CubesUtils;
+
 #pragma warning disable UNT0006
 
 public class Player : MonoBehaviour
 {
     public Transform LookFrom { get; private set; }
-    private World World;
+    private World _world;
     private EventSystem _eventSystem;
     private PlayerInventory _inventory;
 
@@ -55,6 +57,8 @@ public class Player : MonoBehaviour
     public int selectedBlockIndex = -1;
     public bool isJumping;
 
+    private Vector3Int _lastPlayerChunk;
+
 #pragma warning disable IDE0051
     // "CodeQuality", "IDE0051: Private member is unused"
     // These methods gets automatically called by Unity's new Input System
@@ -73,16 +77,16 @@ public class Player : MonoBehaviour
     {
         if (
             Time.timeScale == 0 ||
-            World == null ||
+            _world == null ||
             !highlightBlock.gameObject.activeSelf ||
             !value.isPressed
         ) return;
 
         //World.GetChunkFromVector3(highlightBlock.position).EditVoxel(highlightBlock.position, 0);
-        BlockObject blockObject = World.GetVoxel(highlightBlock.position);
+        BlockObject blockObject = _world.GetVoxel(highlightBlock.position);
         if (blockObject.blockType != Block.Air)
         {
-            World.PlaceBlock(highlightBlock.position, 0);
+            _world.PlaceBlock(highlightBlock.position, 0);
 
             DropItemsArgs itemsArgs = new()
             {
@@ -99,7 +103,7 @@ public class Player : MonoBehaviour
     {
         if (Time.timeScale == 0 || selectedBlockIndex < 0) return;
 
-        BlockObject blockObjet = World.GetVoxel(placeBlock.position);
+        BlockObject blockObjet = _world.GetVoxel(placeBlock.position);
 
         if (
             blockObjet.blockType != Block.Air ||
@@ -118,11 +122,11 @@ public class Player : MonoBehaviour
         if (xSelf == xBlock && (ySelf == yBlock || ySelf + 1 == yBlock) && zSelf == zBlock) return;
 
         Block selBlock = (Block)selectedBlockIndex;
-        BlockObject selObj = World.Blocks[(int)selBlock];
+        BlockObject selObj = _world.Blocks[(int)selBlock];
 
         if (_inventory.RemoveItem(new Item(selObj), 1))
         {
-            World.PlaceBlock(placeBlock.position, selBlock);
+            _world.PlaceBlock(placeBlock.position, selBlock);
         }
     }
 
@@ -141,14 +145,17 @@ public class Player : MonoBehaviour
     private async UniTaskVoid Start()
     {
         _curTransform = transform;
-        //camera = GameObject.Find("Main Camera").transform;
         _eventSystem = ServiceLocator.Get<EventSystem>();
+        _world = ServiceLocator.Get<World>();
         LookFrom = transform.GetChild(1);
 
-        World = World.Instance;
         _inventory = GetComponent<PlayerInventory>();
 
         Cursor.lockState = CursorLockMode.Locked;
+
+        //_lastPlayerChunk = GetChunkCoordFromVector3(_curTransform.position);
+        //_eventSystem.TriggerEvent(EventType.PlayerChunkChanged, new PlayerChunkChangedArgs() { newChunkPos = _lastPlayerChunk });
+        _lastPlayerChunk = new(-100, -100, -100);
 
         gameObject.SetActive(false);
 
@@ -170,12 +177,20 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
+        var playerChunk = GetChunkCoordFromVector3(_curTransform.position);
+
+        if (_lastPlayerChunk != playerChunk)
+        {
+            _lastPlayerChunk = playerChunk;
+            _eventSystem.TriggerEvent(EventType.PlayerChunkChanged, new PlayerChunkChangedArgs() { newChunkPos = playerChunk });
+        }
+
         if (!_inventory.InInventory)
         {
             PlaceCursorBlock();
 
-            float rotationY = mouse.y * World.Settings.mouseSenstivity * Time.deltaTime;
-            float rotationX = mouse.x * World.Settings.mouseSenstivity * Time.deltaTime;
+            float rotationY = mouse.y * _world.Settings.mouseSenstivity * Time.deltaTime;
+            float rotationX = mouse.x * _world.Settings.mouseSenstivity * Time.deltaTime;
             if (rotationY > 0)
                 angles = new Vector3(Mathf.MoveTowards(angles.x, -90, rotationY), angles.y + rotationX, 0);
             else
@@ -203,14 +218,14 @@ public class Player : MonoBehaviour
 
     public void UpdateDirections(Vector3 pos)
     {
-        Front = World.CheckForVoxel(new(pos.x, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z + playerWidth));
-        Back = World.CheckForVoxel(new(pos.x, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z - playerWidth));
-        Left = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z));
-        Right = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z));
-        FrontLeft = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z + playerWidth));
-        FrontRight = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z + playerWidth)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z + playerWidth));
-        BackLeft = World.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z - playerWidth));
-        BackRight = World.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z - playerWidth)) || World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z - playerWidth));
+        Front = _world.CheckForVoxel(new(pos.x, pos.y, pos.z + playerWidth)) || _world.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z + playerWidth));
+        Back = _world.CheckForVoxel(new(pos.x, pos.y, pos.z - playerWidth)) || _world.CheckForVoxel(new(pos.x, pos.y + 1f, pos.z - playerWidth));
+        Left = _world.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z)) || _world.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z));
+        Right = _world.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z)) || _world.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z));
+        FrontLeft = _world.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z + playerWidth)) || _world.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z + playerWidth));
+        FrontRight = _world.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z + playerWidth)) || _world.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z + playerWidth));
+        BackLeft = _world.CheckForVoxel(new(pos.x - playerWidth, pos.y, pos.z - playerWidth)) || _world.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1f, pos.z - playerWidth));
+        BackRight = _world.CheckForVoxel(new(pos.x + playerWidth, pos.y, pos.z - playerWidth)) || _world.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1f, pos.z - playerWidth));
     }
 
     private void CalculateVelocity()
@@ -249,7 +264,7 @@ public class Player : MonoBehaviour
 
         cast.Raycast(LookFrom.position, LookFrom.forward, reach, (Vector3Int block, Vector3Int faceNormal) =>
         {
-            bool isSolid = World.CheckForVoxel(block);
+            bool isSolid = _world.CheckForVoxel(block);
 
             if (isSolid)
             {
@@ -273,10 +288,10 @@ public class Player : MonoBehaviour
     {
         Vector3 pos = _curTransform.position;
         if (
-            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackLeft) ||
-            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackRight) ||
-            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontRight) ||
-            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontLeft)
+            (_world.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackLeft) ||
+            (_world.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z - playerWidth)) && !BackRight) ||
+            (_world.CheckForVoxel(new(pos.x + playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontRight) ||
+            (_world.CheckForVoxel(new(pos.x - playerWidth, pos.y + downSpeed, pos.z + playerWidth)) && !FrontLeft)
         )
         {
             isGrounded = true;
@@ -294,10 +309,10 @@ public class Player : MonoBehaviour
     {
         Vector3 pos = _curTransform.position;
         if (
-            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackLeft) ||
-            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackRight) ||
-            (World.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontRight) ||
-            (World.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontLeft)
+            (_world.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackLeft) ||
+            (_world.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z - playerWidth)) && !BackRight) ||
+            (_world.CheckForVoxel(new(pos.x + playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontRight) ||
+            (_world.CheckForVoxel(new(pos.x - playerWidth, pos.y + 1.8f + upSpeed, pos.z + playerWidth)) && !FrontLeft)
         )
         {
             verticalMomentum = 0;

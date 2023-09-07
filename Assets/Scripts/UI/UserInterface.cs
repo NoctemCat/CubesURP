@@ -26,7 +26,8 @@ public abstract class UserInterface : MonoBehaviour
 
     public virtual void Load(InventoryObject inventory)
     {
-        if (Inventory is not null && Inventory.Id == inventory.Id) return;
+        //if (inventory is not null && Inventory.Id == inventory.Id) return;
+        Reset();
 
         Inventory = inventory;
         //_canvasTransform = transform.root.GetComponent<Canvas>().transform;
@@ -55,8 +56,6 @@ public abstract class UserInterface : MonoBehaviour
                 Inventory.Slots[i].OnBeforeUpdate -= OnBeforeUpdate;
             }
             DestroySlots();
-
-
         }
     }
 

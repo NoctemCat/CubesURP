@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerInventory : MonoBehaviour
 {
-    private World World;
+    private World _world;
     private EventSystem _eventSystem;
     private InventorySystem _inventorySystem;
     private Player _player;
@@ -32,17 +32,15 @@ public class PlayerInventory : MonoBehaviour
 
     private void Start()
     {
-        World = World.Instance;
-        _player = GetComponent<Player>();
+        _world = ServiceLocator.Get<World>();
         _eventSystem = ServiceLocator.Get<EventSystem>();
-
-        //InventorySystem.
-        _tooltip = ServiceLocator.Get<TooltipUi>();
         _inventorySystem = ServiceLocator.Get<InventorySystem>();
+        _player = GetComponent<Player>();
+        _tooltip = ServiceLocator.Get<TooltipUi>();
 
         _toolbar = new InventoryObject(9, "Toolbar");
         _inventory = new InventoryObject(24, "Player Inventory");
-        _creativeInventory = new InventoryObject(24, "Creative Inventory");
+        _creativeInventory = new InventoryObject(24, "Player Inventory");
 
         _inventorySystem.RegisterInventory(_toolbar);
         _inventorySystem.RegisterInventory(_inventory);
@@ -59,8 +57,22 @@ public class PlayerInventory : MonoBehaviour
 
         //eventSystem.OnResumeGame += SetCursorState;
         _eventSystem.StartListening(EventType.ResumeGame, SetCursorStateHandler);
+        _eventSystem.StartListening(EventType.EnableCreative, EnableCreativeHandler);
+        _eventSystem.StartListening(EventType.DisableCreative, DisableCreativeHandler);
 
         DropItemDelay = new(DropItem, _dropItemDelay);
+    }
+
+    private void EnableCreativeHandler(in EventArgs _)
+    {
+        creativeMode = true;
+        _inventorySystem.Show(_creativeInventory);
+    }
+
+    private void DisableCreativeHandler(in EventArgs _)
+    {
+        creativeMode = false;
+        _inventorySystem.Show(_inventory);
     }
 
     private void PopulateCreativeInventory()
@@ -123,21 +135,22 @@ public class PlayerInventory : MonoBehaviour
     {
         if (_player.selectedBlockIndex <= 0) return;
 
-        BlockObject selObj = World.Blocks[_player.selectedBlockIndex];
-        //if (RemoveItem(new Item(selObj), 1))
-        //{
-        //}
-        DropItemsArgs itemsArgs = new()
+        BlockObject selObj = _world.Blocks[_player.selectedBlockIndex];
+
+        if (RemoveItem(new Item(selObj), 1))
         {
-            origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
-            velocity = _player.GetDropItemVelocity(),
-            itemObject = selObj,
-            amount = 1
-        };
-        _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
+            DropItemsArgs itemsArgs = new()
+            {
+                origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
+                velocity = _player.GetDropItemVelocity(),
+                itemObject = selObj,
+                amount = 1
+            };
+            _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);
+        }
     }
 
-    public void SetCursorStateHandler(EventArgs _) => SetCursorState();
+    public void SetCursorStateHandler(in EventArgs _) => SetCursorState();
     public void SetCursorState()
     {
         if (InInventory)
@@ -161,6 +174,7 @@ public class PlayerInventory : MonoBehaviour
     }
     public bool RemoveItem(Item item, int amount)
     {
+        if (creativeMode) return true;
         return _toolbar.RemoveItem(item, amount);
     }
 

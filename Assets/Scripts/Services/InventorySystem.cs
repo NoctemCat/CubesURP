@@ -50,9 +50,10 @@ public class InventorySystem : MonoBehaviour
         else
         {
             GameObject obj = Instantiate(ScreenPrefab, ScreenHolder);
-            UserInterface ui = obj.GetComponent<UserInterface>();
-            ui.Load(inventory);
-            _inventoriesUI[inventory.Id] = ui;
+            userInterface = obj.GetComponent<UserInterface>();
+            userInterface.Load(inventory);
+            _inventoriesUI[inventory.Id] = userInterface;
+            userInterface.gameObject.SetActive(true);
         }
     }
 

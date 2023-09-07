@@ -1,5 +1,6 @@
 
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -13,7 +14,6 @@ using static CubesUtils;
 
 public class StructureSystem : MonoBehaviour
 {
-    private World World;
     private EventSystem _eventSystem;
 
     private Queue<List<VoxelMod>> _structuresPool;
@@ -23,12 +23,22 @@ public class StructureSystem : MonoBehaviour
 
     private void Awake()
     {
-        World = World.Instance;
+        _eventSystem = ServiceLocator.Get<EventSystem>();
 
         _structuresPool = new(100);
         _structures = new(10000);
         _sortedStructures = new(100);
         _timer = 0f;
+    }
+
+    private void OnEnable()
+    {
+        ServiceLocator.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        ServiceLocator.Unregister(this);
     }
 
     private List<VoxelMod> ClaimList()
@@ -43,7 +53,7 @@ public class StructureSystem : MonoBehaviour
         _structuresPool.Enqueue(list);
     }
 
-    public void AddStructures(NativeList<VoxelMod> structures)
+    public void AddStructuresToSort(NativeList<VoxelMod> structures)
     {
         _structures.AddRange(structures.AsArray());
     }
@@ -87,17 +97,18 @@ public class StructureSystem : MonoBehaviour
         foreach (var kvp in _sortedStructures)
         {
             if (kvp.Value.Count < 0) continue;
-            Chunk chunk;
-            if (World.Chunks.ContainsKey(kvp.Key))
-            {
-                chunk = World.Chunks[kvp.Key];
-            }
-            else
-            {
-                chunk = new(kvp.Key);
-                World.Chunks[kvp.Key] = chunk;
-            }
-            chunk.AddRangeModification(kvp.Value).Forget();
+
+            _eventSystem.TriggerEvent(
+                EventType.Chunk_AddSortedStructures,
+                new AddSortedStructuresArgs() { chunkPos = kvp.Key, structures = kvp.Value }
+            );
         }
     }
+}
+
+public class AddSortedStructuresArgs : EventArgs
+{
+    public Vector3Int chunkPos;
+    public List<VoxelMod> structures;
+    public AddSortedStructuresArgs() => eventType = EventType.Chunk_AddSortedStructures;
 }

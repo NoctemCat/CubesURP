@@ -1,7 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 
 public static class VoxelDataStatic
@@ -10,21 +7,19 @@ public static class VoxelDataStatic
     public static int ChunkHeight = 32;
     public static int ChunkLength = 32;
     public static int ChunkSize = ChunkWidth * ChunkHeight * ChunkLength;
-    public static int WorldSizeInChunks = 200;
-    public static int WorldSizeInVoxels = WorldSizeInChunks * ChunkWidth;
 
     public static int TextureAtlasSizeInBlocks = 16;
     public static float NormalizedBlockTextureSize => 1.0f / TextureAtlasSizeInBlocks;
 
     public static readonly Vector3[] voxelVerts = {
-        new Vector3(0.0f, 0.0f, 0.0f),
-        new Vector3(1.0f, 0.0f, 0.0f),
-        new Vector3(1.0f, 1.0f, 0.0f),
-        new Vector3(0.0f, 1.0f, 0.0f),
-        new Vector3(0.0f, 0.0f, 1.0f),
-        new Vector3(1.0f, 0.0f, 1.0f),
-        new Vector3(1.0f, 1.0f, 1.0f),
-        new Vector3(0.0f, 1.0f, 1.0f),
+        new(0.0f, 0.0f, 0.0f),
+        new(1.0f, 0.0f, 0.0f),
+        new(1.0f, 1.0f, 0.0f),
+        new(0.0f, 1.0f, 0.0f),
+        new(0.0f, 0.0f, 1.0f),
+        new(1.0f, 0.0f, 1.0f),
+        new(1.0f, 1.0f, 1.0f),
+        new(0.0f, 1.0f, 1.0f),
     };
 
     // Adjusted for holes
@@ -41,12 +36,12 @@ public static class VoxelDataStatic
 
 
     public static readonly Vector3[] faceChecks = {
-        new Vector3(0.0f, 0.0f, -1.0f),
-        new Vector3(0.0f, 0.0f, 1.0f),
-        new Vector3(0.0f, 1.0f, 0.0f),
-        new Vector3(0.0f, -1.0f, 0.0f),
-        new Vector3(-1.0f, 0.0f, 0.0f),
-        new Vector3(1.0f, 0.0f, 0.0f),
+        new(0.0f, 0.0f, -1.0f),
+        new(0.0f, 0.0f, 1.0f),
+        new(0.0f, 1.0f, 0.0f),
+        new(0.0f, -1.0f, 0.0f),
+        new(-1.0f, 0.0f, 0.0f),
+        new(1.0f, 0.0f, 0.0f),
     };
 
     public static readonly int[,] voxelTris = {
@@ -61,19 +56,19 @@ public static class VoxelDataStatic
     };
 
     public static readonly Vector2[] voxelUvs = {
-        new Vector2(0.0f, 0.0f),
-        new Vector2(0.0f, 1.0f),
-        new Vector2(1.0f, 0.0f),
-        new Vector2(1.0f, 1.0f),
+        new(0.0f, 0.0f),
+        new(0.0f, 1.0f),
+        new(1.0f, 0.0f),
+        new(1.0f, 1.0f),
     };
 
     public static readonly Vector3[] voxelNormals = {
-        new Vector3(0f, 0f, -1f),
-        new Vector3(0f, 0f, 1f),
-        new Vector3(0f, 1f, 0f),
-        new Vector3(0f, -1f, 0f),
-        new Vector3(-1f, 0f, 0f),
-        new Vector3(1f, 0f, 0f),
+        new(0f, 0f, -1f),
+        new(0f, 0f, 1f),
+        new(0f, 1f, 0f),
+        new(0f, -1f, 0f),
+        new(-1f, 0f, 0f),
+        new(1f, 0f, 0f),
     };
 }
 

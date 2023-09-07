@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class BlockPhysics : MonoBehaviour
 {
-    private World World;
+    private World _world;
 
     private float _width;
     private float _height;
@@ -29,7 +29,7 @@ public class BlockPhysics : MonoBehaviour
 
     private void Start()
     {
-        World = World.Instance;
+        _world = ServiceLocator.Get<World>();
         _curTansform = transform;
         Reset();
     }
@@ -60,14 +60,14 @@ public class BlockPhysics : MonoBehaviour
 
     public void UpdateDirections(Vector3 pos)
     {
-        Front = World.CheckForVoxel(new(pos.x, pos.y - _height, pos.z + _length));
-        Back = World.CheckForVoxel(new(pos.x, pos.y - _height, pos.z - _length));
-        Left = World.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z));
-        Right = World.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z));
-        FrontLeft = World.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z + _length));
-        FrontRight = World.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z + _length));
-        BackLeft = World.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z - _length));
-        BackRight = World.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z - _length));
+        Front = _world.CheckForVoxel(new(pos.x, pos.y - _height, pos.z + _length));
+        Back = _world.CheckForVoxel(new(pos.x, pos.y - _height, pos.z - _length));
+        Left = _world.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z));
+        Right = _world.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z));
+        FrontLeft = _world.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z + _length));
+        FrontRight = _world.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z + _length));
+        BackLeft = _world.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z - _length));
+        BackRight = _world.CheckForVoxel(new(pos.x + _width, pos.y - _height, pos.z - _length));
     }
 
     private void CalculateVelocity(Vector3 pos)
@@ -104,10 +104,10 @@ public class BlockPhysics : MonoBehaviour
     private float CheckDownSpeed(Vector3 pos, float downSpeed)
     {
         if (
-            (World.CheckForVoxel(new(pos.x - _width, pos.y - _height + downSpeed, pos.z - _length)) && !BackLeft) ||
-            (World.CheckForVoxel(new(pos.x + _width, pos.y - _height + downSpeed, pos.z - _length)) && !BackRight) ||
-            (World.CheckForVoxel(new(pos.x + _width, pos.y - _height + downSpeed, pos.z + _length)) && !FrontRight) ||
-            (World.CheckForVoxel(new(pos.x - _width, pos.y - _height + downSpeed, pos.z + _length)) && !FrontLeft)
+            (_world.CheckForVoxel(new(pos.x - _width, pos.y - _height + downSpeed, pos.z - _length)) && !BackLeft) ||
+            (_world.CheckForVoxel(new(pos.x + _width, pos.y - _height + downSpeed, pos.z - _length)) && !BackRight) ||
+            (_world.CheckForVoxel(new(pos.x + _width, pos.y - _height + downSpeed, pos.z + _length)) && !FrontRight) ||
+            (_world.CheckForVoxel(new(pos.x - _width, pos.y - _height + downSpeed, pos.z + _length)) && !FrontLeft)
         )
         {
             _verticalMomentum = -(downSpeed + _verticalMomentum) * 0.46f;
