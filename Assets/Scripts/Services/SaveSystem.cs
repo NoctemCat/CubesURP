@@ -15,7 +15,7 @@ public class SaveSystem : MonoBehaviour
     //private World World;
     [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
     //private EventSystem _eventSystem;
-    private HashSet<Vector3Int> _savedChunks;
+    private HashSet<Vector3Int> _savedChunks = null;
     public HashSet<Vector3Int> SavedChunks => _savedChunks;
     private ChunkDataPool _pool;
 
@@ -28,6 +28,7 @@ public class SaveSystem : MonoBehaviour
 
     private void Awake()
     {
+        ServiceLocator.Register(this);
         _pool = new();
         SaveChunkPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName, "chunks");
         SavedChunksPath = Path.Combine(PathHelper.WorldsPath, WorldData.worldName, "chunks.saved");
@@ -37,6 +38,7 @@ public class SaveSystem : MonoBehaviour
         {
             LoadSavedChunks();
             //LoadedChunks = new(_savedChunks);
+            _savedChunks ??= new();
         }
         else
         {
@@ -46,7 +48,6 @@ public class SaveSystem : MonoBehaviour
 
         _time = 0f;
         _forceSave = false;
-        ServiceLocator.Register(this);
     }
 
     private void LoadSavedChunks()
@@ -182,8 +183,9 @@ public class SaveSystem : MonoBehaviour
         return chunkData;
     }
 
-    public void ReclaimData(ChunkData data)
+    public void ReclaimData(Vector3Int chunkPos, ChunkData data)
     {
+        _loadedChunks.Remove(chunkPos);
         _pool.Reclaim(data);
     }
 

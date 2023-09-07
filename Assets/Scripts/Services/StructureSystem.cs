@@ -16,7 +16,7 @@ public class StructureSystem : MonoBehaviour
 {
     private EventSystem _eventSystem;
 
-    private Queue<List<VoxelMod>> _structuresPool;
+    private Stack<List<VoxelMod>> _structuresPool;
     private List<VoxelMod> _structures;
     private Dictionary<Vector3Int, List<VoxelMod>> _sortedStructures;
     private float _timer;
@@ -41,16 +41,16 @@ public class StructureSystem : MonoBehaviour
         ServiceLocator.Unregister(this);
     }
 
-    private List<VoxelMod> ClaimList()
+    private List<VoxelMod> GetList()
     {
         if (_structuresPool.Count > 0)
-            return _structuresPool.Dequeue();
+            return _structuresPool.Pop();
         return new(20);
     }
     private void ReclaimList(List<VoxelMod> list)
     {
         list.Clear();
-        _structuresPool.Enqueue(list);
+        _structuresPool.Push(list);
     }
 
     public void AddStructuresToSort(NativeList<VoxelMod> structures)
@@ -83,7 +83,7 @@ public class StructureSystem : MonoBehaviour
             VoxelMod mod = _structures[i];
             Vector3Int cPos = I3ToVI3(mod.chunkPos);
             if (!_sortedStructures.ContainsKey(cPos))
-                _sortedStructures.Add(cPos, ClaimList());
+                _sortedStructures.Add(cPos, GetList());
 
             _sortedStructures[cPos].Add(mod);
         }

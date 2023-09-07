@@ -34,13 +34,16 @@ public class DynamicInterface : UserInterface
         {
             GameObject obj = Inventory.Slots[i].SlotDisplay;
 
-            EventTrigger trigger = obj.GetComponentInChildren<EventTrigger>();
-            trigger.triggers.Clear();
+            if (Inventory.Slots[i].SlotDisplay != null)
+            {
+                EventTrigger trigger = obj.GetComponentInChildren<EventTrigger>();
+                trigger.triggers.Clear();
 
-            slotsOnInterface.Remove(obj);
-            Inventory.Slots[i].SlotDisplay = null;
+                slotsOnInterface.Remove(obj);
+                Inventory.Slots[i].SlotDisplay = null;
 
-            Destroy(obj);
+                Destroy(obj);
+            }
         }
     }
 }

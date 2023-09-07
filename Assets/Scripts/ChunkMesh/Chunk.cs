@@ -30,7 +30,7 @@ public class Chunk
     public Vector3 WorldPos { get; private set; }
 
     private readonly World _world;
-    private readonly MeshDataPool _meshDataPool;
+    //private readonly MeshDataPool _meshDataPool;
     private readonly EventSystem _eventSystem;
     private readonly StructureSystem _structureSystem;
     private VoxelData _data;
@@ -69,7 +69,7 @@ public class Chunk
     private Chunk()
     {
         _world = ServiceLocator.Get<World>();
-        _meshDataPool = ServiceLocator.Get<MeshDataPool>();
+        //_meshDataPool = ServiceLocator.Get<MeshDataPool>();
         _structureSystem = ServiceLocator.Get<StructureSystem>();
         _eventSystem = ServiceLocator.Get<EventSystem>();
 
@@ -80,7 +80,7 @@ public class Chunk
 
         VoxelMap = new(_data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
-        NeighbourModifications = new(512, Allocator.Persistent);
+        NeighbourModifications = new(1024, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
 
         _voxelMapGenerated = false;
@@ -155,16 +155,17 @@ public class Chunk
 
         var playerChunk = (args as PlayerChunkChangedArgs).newChunkPos;
 
-        Vector3Int viewChunkPos = I3ToVI3(ChunkPos) - playerChunk;
+        Vector3Int chunkPos = I3ToVI3(ChunkPos);
+        Vector3Int viewChunkPos = chunkPos - playerChunk;
         if (ChunkInsideViewDistance(viewChunkPos))
         {
             IsActive = true;
         }
         else if (ChunkOutsideDisposeDistance(viewChunkPos))
         {
-            if (_world.Chunks.ContainsKey(viewChunkPos))
+            if (_world.Chunks.ContainsKey(chunkPos))
             {
-                _world.Chunks.Remove(I3ToVI3(ChunkPos));
+                _world.Chunks.Remove(chunkPos);
                 Dispose();
             }
         }
@@ -470,23 +471,47 @@ public struct GenerateChunkJob : IJobParallelFor
         float strongestWeight = 0f;
         int strongestBiomeIndex = 0;
 
+        NativeArray<float> heights = new(Biomes.Length, Allocator.Temp);
         for (int i = 0; i < Biomes.Length; i++)
         {
             float weight = Get2DPerlin(Data, new float2(pos.x, pos.z), Biomes[i].offset, Biomes[i].scale);
-
             if (weight > strongestWeight)
             {
                 strongestWeight = weight;
                 strongestBiomeIndex = i;
             }
 
-            float height = Biomes[i].terrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biomes[i].terrainScale) * weight;
-            sumOfHeights += height;
-            count++;
+
+            //float height = Biomes[i].terrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biomes[i].terrainScale) * weight;
+            heights[i] = Biomes[i].terrainHeight * Get2DPerlin(Data, new float2(pos.x, pos.z), 0f, Biomes[i].terrainScale);
+
+            //if (height > 0f)
+            //{
+            //}
+            //sumOfHeights += height;
+            //count++;
+            //sumOfHeights += height;
+            //count++;
         }
 
+        for (int i = 0; i < heights.Length; i++)
+        {
+            float weight = Get2DPerlin(Data, new float2(pos.x, pos.z), Biomes[i].offset, Biomes[i].scale);
+            if (i == strongestBiomeIndex)
+            {
+                sumOfHeights += heights[i] * weight;
+            }
+            else
+            {
+                sumOfHeights += heights[i] * weight * 0.75f;
+            }
+        }
+
+        //int bIndex = Data.rng.NextInt(0, Biomes.Length);
+
         BiomeStruct biome = Biomes[strongestBiomeIndex];
-        sumOfHeights /= count;
+        sumOfHeights /= heights.Length;
+        //sumOfHeights = strongestHeight;
 
 
         // BASIC TERRAIN PASSS

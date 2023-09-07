@@ -56,6 +56,10 @@ public class World : MonoBehaviour
 
         VoxelData = new(randomXYZ);
 
+        var temp = VoxelData;
+        temp.rng = rng;
+        VoxelData = temp;
+
         Blocks = WorldHelper.InitBlocksMapping(itemDatabase);
         NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
@@ -72,9 +76,7 @@ public class World : MonoBehaviour
 
         ActiveChunks = new(10);
 
-        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 50f, VoxelData.ChunkLength / 2);
-
-        ServiceLocator.Register(new MeshDataPool());
+        PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 80f, VoxelData.ChunkLength / 2);
     }
 
     private void OnEnable()
@@ -120,14 +122,9 @@ public class World : MonoBehaviour
 
         var playerChunk = (args as PlayerChunkChangedArgs).newChunkPos;
         _playerChunk = playerChunk;
-        //ActiveChunks.Clear();
 
         if (_generatingChunks)
         {
-            //_cts.Cancel();
-            //_cts.Dispose();
-            //_cts = null;
-            //_generatingChunks = false;
             return;
         }
 
@@ -154,6 +151,7 @@ public class World : MonoBehaviour
 
     private void OnDestroy()
     {
+        //ServiceLocator.Unregister<MeshDataPool>();
         ServiceLocator.Unregister(this);
 
         foreach (var kvp in Chunks)
@@ -170,7 +168,7 @@ public class World : MonoBehaviour
         Biomes.Dispose();
         DummyMap.Dispose();
 
-        ServiceLocator.Get<MeshDataPool>().Dispose();
+        //ServiceLocator.Get<MeshDataPool>().Dispose();
         VoxelData.Dispose();
     }
 
@@ -234,8 +232,13 @@ public class World : MonoBehaviour
     //float timerGarbage = 0f;
     private void Update()
     {
-        //PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+        //timer += Time.deltaTime;
+        ////PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
         _results.Clear();
+        //if (timer > 20f)
+        //{
+        //    Debug.Log($"Exist {Chunks.Count} chunks");
+        //}
 
         for (int i = 0; i < ActiveChunks.Count; i++)
         {
@@ -274,7 +277,6 @@ public class World : MonoBehaviour
 
             if (SaveSystem.SavedChunks.Contains(checkCoord))
             {
-                //SaveSystem.LoadedChunks.Remove(checkCoord);
                 string chunkName = PathHelper.GenerateChunkName(checkCoord);
                 if (CheckChunkFile(chunkName))
                 {
@@ -285,7 +287,7 @@ public class World : MonoBehaviour
                         var chunk = new Chunk(chunkData);
                         Chunks[checkCoord] = chunk;
 
-                        SaveSystem.ReclaimData(chunkData);
+                        SaveSystem.ReclaimData(checkCoord, chunkData);
                     });
                 }
             }

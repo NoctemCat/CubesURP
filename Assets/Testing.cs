@@ -5,67 +5,45 @@ using UnityEngine;
 
 public class Testing : MonoBehaviour
 {
-    List<TestingClass> testing = new(10);
+    //List<TestingClass> testing = new(10);
+    private event Action action;
 
     void Start()
     {
-        //string getText()
-        //{
+        action += Hello;
+        action += HelloOther;
+    }
 
-        //    return $"Timer tooltip \n{_timer}";
-        //}
-        //TooltipScreenSpaceUI.ShowTooltip_Static(getText);
-        testing.Add(new TestingClass());
-        testing.Add(new TestingClass());
-        testing.Add(new Derived());
-        testing.Add(new Derived2("Derived 2 1"));
-        testing.Add(new Derived2("Other text"));
-        testing.Add(new Derived());
-        testing.Add(new TestingClass());
-        testing.Add(new Derived());
-        testing.Add(new Derived2("Derived 2 3"));
-        testing.Add(new Derived());
+    int count = 0;
+    void Update()
+    {
 
-        foreach (TestingClass item in testing)
+        if (Time.frameCount % 60 == 0)
         {
-            if (item is ITestInterface testInterface)
-            {
-                //Debug.Log(testInterface.GetText());
-            }
+            Debug.Log(GetSomePhrease());
+            //count++;
+            //action?.Invoke();
+
+            //action -= Hello;
+
+            //Debug.Log($"Called action {count} times");
         }
     }
 
-    void Update()
+
+    private void Hello()
     {
-    }
-}
-
-public interface ITestInterface
-{
-    string GetText();
-}
-
-public class TestingClass
-{
-    public int type = 1;
-    public TestingClass() { }
-}
-
-public class Derived : TestingClass
-{
-    public Derived() { type = 2; }
-}
-public class Derived2 : TestingClass, ITestInterface
-{
-    public string Holder;
-    public Derived2(string text)
-    {
-        type = 3;
-        Holder = text;
+        Debug.Log("Hello");
     }
 
-    public string GetText()
+    private void HelloOther()
     {
-        return Holder;
+        Debug.Log("Hello Other");
+    }
+
+
+    private string GetSomePhrease()
+    {
+        return "Some Phrase";
     }
 }

@@ -24,6 +24,8 @@ public struct VoxelData
     public NativeArray<int4> VoxelTris;
     public NativeArray<float3> VoxelNormals;
 
+    public Unity.Mathematics.Random rng;
+
     public VoxelData(float3 _randomXYZ)
     {
         ChunkWidth = VoxelDataStatic.ChunkWidth;
@@ -60,6 +62,8 @@ public struct VoxelData
         {
             VoxelNormals[i] = new(VoxelDataStatic.voxelNormals[i]);
         }
+
+        rng = new();
     }
 
     public void Dispose(JobHandle dependsOn = default)

@@ -70,7 +70,6 @@ public class EventSystem
     {
         if (_eventDictionary.TryGetValue(eventType, out EventHandler thisEvent))
         {
-            //args ??= new() { eventType = eventType };
             thisEvent.Invoke(args);
         }
     }

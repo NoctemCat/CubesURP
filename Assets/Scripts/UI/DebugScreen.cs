@@ -51,7 +51,8 @@ public class DebugScreen : MonoBehaviour
             _debug.AppendLine($"World Seed: {_world.WorldData.seed}");
             _debug.AppendLine($"FPS: {_frameRate}");
             _debug.AppendLine($"XYZ: {Mathf.FloorToInt(pPos.x)} / {Mathf.FloorToInt(pPos.y)} / {Mathf.FloorToInt(pPos.z)}");
-            //debug.AppendLine($"Chunk: {_world.playerChunk.x} / {World.PlayerChunk.y} / {World.PlayerChunk.z}");
+            _debug.AppendLine($"Chunk: {Mathf.FloorToInt(pPos.x / _world.VoxelData.ChunkWidth)} / {Mathf.FloorToInt(pPos.y / _world.VoxelData.ChunkHeight)} / {Mathf.FloorToInt(pPos.z / _world.VoxelData.ChunkLength)}");
+            _debug.AppendLine($"Chunks exist: {_world.Chunks.Count}");
 
             _debugText.text = _debug.ToString();
         }

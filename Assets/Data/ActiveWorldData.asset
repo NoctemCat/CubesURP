@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4eb49751643dfe846b13d5680f84005b, type: 3}
   m_Name: ActiveWorldData
   m_EditorClassIdentifier: 
-  seed: awra
-  worldName: Test
+  seed: testtest
+  worldName: gul

@@ -22,6 +22,8 @@ public class InventorySystem : MonoBehaviour
     }
     private void OnDestroy()
     {
+        _inventories.Clear();
+        _inventoriesUI.Clear();
         ServiceLocator.Unregister(this);
     }
 
