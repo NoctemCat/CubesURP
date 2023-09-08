@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Grasslands
   m_EditorClassIdentifier: 
   biomeName: Grasslands
-  offset: 1234
+  offset: {x: 76, y: 51}
   scale: 0.042
-  terrainHeight: 22
-  terrainScale: 0.3
+  terrainHeight: 28
+  terrainScale: 90.88
+  noise: {fileID: 11400000, guid: b5388694fe7a3b646a4b8fbf01747956, type: 2}
   surfaceBlock: 5
   subsurfaceBlock: 4
   floraType: 0
@@ -41,3 +42,6 @@ MonoBehaviour:
     scale: 0.2
     threshold: 0.6
     noiseOffset: 500
+  previewWidth: 299
+  chunksShownWidth: 4
+  needsAutoUpdate: 0

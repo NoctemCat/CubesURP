@@ -2892,7 +2892,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isGrounded: 0
   isSprinting: 0
-  ApplyGravity: 1
+  ApplyGravity: 0
   walkSpeed: 3
   sprintSpeed: 20
   jumpForce: 7
@@ -4226,8 +4226,6 @@ MonoBehaviour:
     timeBetweenGenerating: 0
     mouseSenstivity: 0
   _biomeScObjs:
-  - {fileID: 11400000, guid: 40ed8244d10033b4dbccba0319928fcd, type: 2}
-  - {fileID: 11400000, guid: 7680dfad7b7273d458d36887ba91c434, type: 2}
   - {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
   <WorldData>k__BackingField: {fileID: 11400000, guid: 2f719428bdcc3de44a9fca93196af111,
     type: 2}

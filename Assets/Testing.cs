@@ -6,15 +6,15 @@ using UnityEngine;
 public class Testing : MonoBehaviour
 {
     //List<TestingClass> testing = new(10);
-    private event Action action;
+    private event Action Action;
 
     void Start()
     {
-        action += Hello;
-        action += HelloOther;
+        Action += Hello;
+        Action += HelloOther;
     }
 
-    int count = 0;
+    //int count = 0;
     void Update()
     {
 
@@ -22,7 +22,7 @@ public class Testing : MonoBehaviour
         {
             Debug.Log(GetSomePhrease());
             //count++;
-            //action?.Invoke();
+            Action?.Invoke();
 
             //action -= Hello;
 

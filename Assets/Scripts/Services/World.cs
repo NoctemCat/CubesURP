@@ -51,14 +51,11 @@ public class World : MonoBehaviour
         _eventSystem = ServiceLocator.Get<EventSystem>();
         var itemDatabase = ServiceLocator.Get<ItemDatabaseObject>();
 
-        Unity.Mathematics.Random rng = new(math.hash(new int2(WorldData.seed.GetHashCode(), 0)));
+        uint seed = math.hash(new int2(WorldData.seed.GetHashCode(), 0));
+        Unity.Mathematics.Random rng = new(seed);
         float3 randomXYZ = rng.NextFloat3() * 10000;
 
-        VoxelData = new(randomXYZ);
-
-        var temp = VoxelData;
-        temp.rng = rng;
-        VoxelData = temp;
+        VoxelData = new(seed, randomXYZ, rng);
 
         Blocks = WorldHelper.InitBlocksMapping(itemDatabase);
         NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
@@ -403,20 +400,21 @@ public class World : MonoBehaviour
         return new(x, y, z);
     }
 
-    public int3 GetPosInChunkFromVector3(int3 chunkPos, Vector3 worldPos)
-    {
-        int x = (int)(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
-        int y = (int)(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
-        int z = (int)(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
-        return new(x, y, z);
-    }
-    public int3 GetPosInChunkFromVector3(Vector3Int chunkPos, int3 worldPos)
-    {
-        int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
-        int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
-        int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
-        return new(x, y, z);
-    }
+    //public int3 GetPosInChunkFromVector3(int3 chunkPos, Vector3 worldPos)
+    //{
+    //    int x = (int)(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
+    //    int y = (int)(worldPos.y - (chunkPos.y * VoxelData.ChunkHeight));
+    //    int z = (int)(worldPos.z - (chunkPos.z * VoxelData.ChunkLength));
+    //    return new(x, y, z);
+    //}
+    //public int3 GetPosInChunkFromVector3(Vector3Int chunkPos, int3 worldPos)
+    //{
+    //    int x = worldPos.x - (chunkPos.x * VoxelData.ChunkWidth);
+    //    int y = worldPos.y - (chunkPos.y * VoxelData.ChunkHeight);
+    //    int z = worldPos.z - (chunkPos.z * VoxelData.ChunkLength);
+    //    return new(x, y, z);
+    //}
+
     public int3 GetPosInChunkFromVector3(Vector3Int chunkPos, Vector3 worldPos)
     {
         int x = (int)(worldPos.x - (chunkPos.x * VoxelData.ChunkWidth));
@@ -448,7 +446,7 @@ public class World : MonoBehaviour
 
             if (!chunk.IsActive) return false;
             //Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].
-            result = Blocks[(int)chunk.VoxelMap[CalcIndex(block)]].isSolid;
+            result = Blocks[(int)chunk.VoxelMap[CalcIndex(VoxelData, block)]].isSolid;
         }
 
         _results.Add(worldPosInt, result);
@@ -463,12 +461,12 @@ public class World : MonoBehaviour
             int3 block = GetPosInChunkFromVector3(thisChunk, worldPos);
             chunk.VoxelMapAccess.Complete();
 
-            return Blocks[(int)chunk.VoxelMap[CalcIndex(block)]];
+            return Blocks[(int)chunk.VoxelMap[CalcIndex(VoxelData, block)]];
         }
         return Blocks[(int)Block.Air];
     }
 
-    private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
+    //private int CalcIndex(int3 xyz) => xyz.x * VoxelData.ChunkHeight * VoxelData.ChunkLength + xyz.y * VoxelData.ChunkLength + xyz.z;
 }
 
 [Serializable]

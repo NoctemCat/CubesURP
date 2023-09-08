@@ -9,6 +9,7 @@ using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 using UnityEngine;
 
+using static CubesUtils;
 static class MeshBuilder
 {
     [BurstCompile]
@@ -204,10 +205,10 @@ static class MeshBuilder
                         return false;
                 }
 
-                return Blocks[(int)voxelMap[CalcIndex(pos)]].isTransparent;
+                return Blocks[(int)voxelMap[CalcIndex(Data, pos)]].isTransparent;
             }
 
-            return Blocks[(int)VoxelMap[CalcIndex(pos)]].isTransparent;
+            return Blocks[(int)VoxelMap[CalcIndex(Data, pos)]].isTransparent;
         }
 
         Block GetNeighbour(int3 pos, VoxelFaces face)
@@ -246,15 +247,11 @@ static class MeshBuilder
                         return Block.Air;
                 }
 
-                return voxelMap[CalcIndex(pos)];
-                //return voxelMap.GetAt
+                return voxelMap[CalcIndex(Data, pos)];
             }
 
-            return VoxelMap[CalcIndex(pos)];
+            return VoxelMap[CalcIndex(Data, pos)];
         }
-
-
-        readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
 
         readonly bool IsVoxelInChunk(int3 pos)
         {
@@ -262,7 +259,6 @@ static class MeshBuilder
                 pos.y >= 0 && pos.y < Data.ChunkHeight &&
                 pos.z >= 0 && pos.z < Data.ChunkLength;
         }
-
     }
 
     [BurstCompile]
@@ -341,10 +337,11 @@ static class MeshBuilder
             //Vertices[4 * i + 1] = new Vertex() { Pos = dot1, Nor = normal, UV = uvs.c1 };
             //Vertices[4 * i + 2] = new Vertex() { Pos = dot2, Nor = normal, UV = uvs.c2 };
             //Vertices[4 * i + 3] = new Vertex() { Pos = dot3, Nor = normal, UV = uvs.c3 };
-            Vertices[4 * i + 0] = new Vertex() { position = dot0, normal = normal, uv = new(0f, 0f, block.GetTextureID(f)) };
-            Vertices[4 * i + 1] = new Vertex() { position = dot1, normal = normal, uv = new(0f, 1f, block.GetTextureID(f)) };
-            Vertices[4 * i + 2] = new Vertex() { position = dot2, normal = normal, uv = new(1f, 0f, block.GetTextureID(f)) };
-            Vertices[4 * i + 3] = new Vertex() { position = dot3, normal = normal, uv = new(1f, 1f, block.GetTextureID(f)) };
+            int textureID = block.GetTextureID(f);
+            Vertices[4 * i + 0] = new Vertex() { position = dot0, normal = normal, uv = new(0f, 0f, textureID) };
+            Vertices[4 * i + 1] = new Vertex() { position = dot1, normal = normal, uv = new(0f, 1f, textureID) };
+            Vertices[4 * i + 2] = new Vertex() { position = dot2, normal = normal, uv = new(1f, 0f, textureID) };
+            Vertices[4 * i + 3] = new Vertex() { position = dot3, normal = normal, uv = new(1f, 1f, textureID) };
         }
 
         private readonly float2x4 AddTexture(int textureID)

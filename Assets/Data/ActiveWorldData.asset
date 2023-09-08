@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: ActiveWorldData
   m_EditorClassIdentifier: 
   seed: testtest
-  worldName: gul
+  worldName: world

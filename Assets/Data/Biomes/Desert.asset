@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Desert
   m_EditorClassIdentifier: 
   biomeName: Desert
-  offset: 6546
+  offset: {x: 0, y: 0}
   scale: 0.058
   terrainHeight: 10
   terrainScale: 0.1
+  noise: {fileID: 0}
   surfaceBlock: 9
   subsurfaceBlock: 9
   floraType: 1
@@ -41,3 +42,6 @@ MonoBehaviour:
     scale: 0.2
     threshold: 0.6
     noiseOffset: 500
+  previewWidth: 40
+  chunksShownWidth: 4
+  needsAutoUpdate: 0
