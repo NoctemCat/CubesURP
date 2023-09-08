@@ -35,6 +35,7 @@ public class Chunk
     private readonly StructureSystem _structureSystem;
     private VoxelData _data;
 
+    // Data stored as xzy
     public NativeArray<Block> VoxelMap { get; private set; }
     public NativeList<VoxelMod> NeighbourModifications { get; private set; }
     private NativeList<StructureMarker> _structures;
@@ -350,17 +351,27 @@ public class Chunk
 
     JobHandle GenerateVoxelMap()
     {
-        GenerateChunkJob generateChunk = new()
+        GenerateChunkJobBatch generateChunk = new()
         {
             Data = _data,
             Biomes = _world.Biomes,
-            XYZMap = _world.XYZMap,
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
             Structures = _structures.AsParallelWriter(),
         };
-        JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
+        JobHandle generateHandle = generateChunk.Schedule(_data.xzMap.Length, 8);
+        //GenerateChunkJob generateChunk = new()
+        //{
+        //    Data = _data,
+        //    Biomes = _world.Biomes,
+        //    XYZMap = _world.XYZMap,
+        //    ChunkPos = ChunkPos,
+
+        //    VoxelMap = VoxelMap,
+        //    Structures = _structures.AsParallelWriter(),
+        //};
+        //JobHandle generateHandle = generateChunk.Schedule(VoxelMap.Length, 8);
 
         BuildStructuresJob buildStructures = new()
         {
@@ -467,7 +478,7 @@ public struct GenerateChunkJob : IJobParallelFor
 
         int solidGroundHeight = 42;
         float sumOfHeights = 0f;
-        int count = 0;
+        //int count = 0;
         float strongestWeight = 0f;
         int strongestBiomeIndex = 0;
 
@@ -569,6 +580,156 @@ public struct GenerateChunkJob : IJobParallelFor
         return voxelValue;
     }
 }
+
+/// <summary>
+/// Number of chunk height
+/// </summary> 
+[BurstCompile]
+public struct GenerateChunkJobBatch : IJobParallelFor
+{
+    [ReadOnly]
+    public VoxelData Data;
+    [ReadOnly]
+    public NativeArray<BiomeStruct> Biomes;
+    //[ReadOnly]
+    //public NativeArray<int3> XYZMap;
+    //public NativeArray<int3> XYMap;
+    [ReadOnly]
+    public int3 ChunkPos;
+
+    [WriteOnly]
+    [NativeDisableContainerSafetyRestriction]
+    public NativeArray<Block> VoxelMap;
+
+    //[WriteOnly]
+    //[NativeDisableContainerSafetyRestriction]
+    public NativeList<StructureMarker>.ParallelWriter Structures;
+
+    public void Execute(int xzPos)
+    {
+        int2 xz = Data.xzMap[xzPos];
+        int2 scaledXZ = new int2(ChunkPos.x, ChunkPos.z) * new int2(Data.ChunkWidth, Data.ChunkLength) + xz;
+        var comb = CalculateHeightTemp(scaledXZ);
+        int biomeIndex = (int)comb.x;
+        float height = comb.y;
+
+        for (int y = 0; y < Data.ChunkHeight; y++)
+        {
+            int3 xyzPos = new(xz.x, y, xz.y);
+            int3 scaledPos = ChunkPos * Data.ChunkDimensions + xyzPos;
+            VoxelMap[CalcIndex(Data, xyzPos)] = GetVoxel(biomeIndex, height, scaledPos);
+        }
+    }
+
+    private float2 CalculateHeight(int2 xz)
+    {
+        //int solidGroundHeight = 42;
+        float sumOfHeights = 0f;
+        //int count = 0;
+        float strongestWeight = 0f;
+        int strongestBiomeIndex = 0;
+
+        NativeArray<float> heights = new(Biomes.Length, Allocator.Temp);
+        for (int i = 0; i < Biomes.Length; i++)
+        {
+            float weight = Get2DPerlin(Data, new float2(xz.x, xz.y), Biomes[i].offset, Biomes[i].scale);
+            if (weight > strongestWeight)
+            {
+                strongestWeight = weight;
+                strongestBiomeIndex = i;
+            }
+
+            heights[i] = Biomes[i].terrainHeight * Get2DPerlin(Data, new float2(xz.x, xz.y), 0f, Biomes[i].terrainScale);
+        }
+
+        for (int i = 0; i < heights.Length; i++)
+        {
+            float weight = Get2DPerlin(Data, new float2(xz.x, xz.y), Biomes[i].offset, Biomes[i].scale);
+            if (i == strongestBiomeIndex)
+                sumOfHeights += heights[i] * weight;
+            else
+                sumOfHeights += heights[i] * weight * 0.75f;
+        }
+
+        return new(strongestBiomeIndex, sumOfHeights / heights.Length);
+    }
+
+    private float2 CalculateHeightTemp(int2 xz)
+    {
+        Unity.Mathematics.Random rng = new(Data.seed);
+        NativeArray<float2> octavesOffsets = new(Biomes[0].noise.octaves.Length, Allocator.Temp);
+        for (int i = 0; i < octavesOffsets.Length; i++)
+        {
+            octavesOffsets[i] = rng.NextFloat2(-100000, 100000) + Biomes[0].offset;
+        }
+        float height = GetHeight(xz, new(Data.ChunkWidth, Data.ChunkLength), Biomes[0].terrainScale, Biomes[0].noise.octaves, octavesOffsets, Biomes[0].noise.complexOctaves);
+        return new(0, Biomes[0].terrainHeight * height);
+    }
+
+    public Block GetVoxel(int biomeIndex, float height, int3 pos)
+    {
+        // IMMUTABLE PASS
+        //if (pos.y == 0)
+        //    return Block.Bedrock;
+
+        // BIOME SELECTION PASS
+
+        BiomeStruct biome = Biomes[biomeIndex];
+        int solidGroundHeight = 42;
+
+        int terrainHeight = (int)math.floor(height + solidGroundHeight);
+
+        Block voxelValue;
+
+        if (pos.y == terrainHeight)
+        {
+            voxelValue = biome.surfaceBlock;
+        }
+        else if (pos.y < terrainHeight && pos.y > terrainHeight - 4)
+        {
+            voxelValue = biome.subsurfaceBlock;
+        }
+        else if (pos.y > terrainHeight)
+        {
+            return Block.Air;
+        }
+        else
+        {
+            voxelValue = Block.Stone;
+        }
+
+        // SECOND PASS
+        if (voxelValue == Block.Stone)
+        {
+            for (int i = 0; i < biome.lodes.Length; i++)
+            {
+                LodeSctruct lode = biome.lodes[i];
+                if (pos.y > lode.minHeight && pos.y < lode.maxHeight)
+                {
+                    if (Get3DPerlin(Data, pos, lode.noiseOffset, lode.scale) > lode.threshold)
+                    {
+                        voxelValue = lode.blockID;
+                    }
+                }
+            }
+        }
+
+        if (pos.y == terrainHeight)
+        {
+            if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, biome.floraZoneScale) > biome.floraZoneThreshold)
+            {
+                if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.floraPlacementScale) > biome.floraPlacementThreshold)
+                {
+                    Structures.AddNoResize(new(biomeIndex, pos, biome.floraType));
+                }
+            }
+        }
+
+        return voxelValue;
+    }
+
+}
+
 
 [BurstCompile]
 public struct BuildStructuresJob : IJobParallelForDefer
@@ -674,7 +835,7 @@ public struct BuildStructuresJob : IJobParallelForDefer
             int3 cPos = ToChunkCoord(worldPos);
             int3 pos = GetPosInChunk(cPos, worldPos);
             if (ChunkPos.Equals(cPos))
-                VoxelMap[CalcIndex(pos)] = block;
+                VoxelMap[CalcIndex(Data, pos)] = block;
             else
                 NeighbourModifications.AddNoResize(new VoxelMod(cPos, pos, block));
 
@@ -684,8 +845,6 @@ public struct BuildStructuresJob : IJobParallelForDefer
 
     private readonly int3 ToChunkCoord(int3 pos) => (int3)math.floor(pos / (float3)Data.ChunkDimensions);
     private readonly int3 GetPosInChunk(int3 chunkPos, int3 worldPos) => worldPos - (chunkPos * Data.ChunkDimensions);
-    readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
-    //private readonly int3 IsInChunk(int3 pos) => worldPos - (chunkPos * Data.ChunkDimensions);
 }
 
 [BurstCompile]
@@ -702,10 +861,10 @@ public struct ApplyModsJob : IJobParallelFor
 
     public void Execute(int i)
     {
-        VoxelMap[CalcIndex(Modifications[i].position)] = Modifications[i].block;
+        VoxelMap[CalcIndex(Data, Modifications[i].position)] = Modifications[i].block;
     }
 
-    readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
+    //readonly int CalcIndex(int3 xyz) => xyz.x * Data.ChunkHeight * Data.ChunkLength + xyz.y * Data.ChunkLength + xyz.z;
 }
 
 [BurstCompile]

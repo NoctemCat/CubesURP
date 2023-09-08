@@ -17,16 +17,19 @@ public struct VoxelData
     public readonly int TextureAtlasSizeInBlocks;
     public readonly float NormalizedBlockTextureSize;
 
+    public readonly uint seed;
     public readonly float3 RandomXYZ;
 
     public NativeArray<float3> VoxelVerts;
     public NativeArray<int3> FaceChecks;
     public NativeArray<int4> VoxelTris;
     public NativeArray<float3> VoxelNormals;
+    public NativeArray<int3> xyzMap;
+    public NativeArray<int2> xzMap;
 
     public Unity.Mathematics.Random rng;
 
-    public VoxelData(float3 _randomXYZ)
+    public VoxelData(uint _seed, float3 _randomXYZ, Unity.Mathematics.Random _rng)
     {
         ChunkWidth = VoxelDataStatic.ChunkWidth;
         ChunkHeight = VoxelDataStatic.ChunkHeight;
@@ -35,6 +38,7 @@ public struct VoxelData
         ChunkSize = VoxelDataStatic.ChunkSize;
         TextureAtlasSizeInBlocks = VoxelDataStatic.TextureAtlasSizeInBlocks;
         NormalizedBlockTextureSize = VoxelDataStatic.NormalizedBlockTextureSize;
+        seed = _seed;
         RandomXYZ = _randomXYZ;
 
         VoxelVerts = new(VoxelDataStatic.voxelVerts.Length, Allocator.Persistent);
@@ -63,7 +67,30 @@ public struct VoxelData
             VoxelNormals[i] = new(VoxelDataStatic.voxelNormals[i]);
         }
 
-        rng = new();
+        rng = _rng;
+
+        xyzMap = new(ChunkSize, Allocator.Persistent);
+        int index = 0;
+        for (int x = 0; x < ChunkWidth; x++)
+        {
+            for (int y = 0; y < ChunkHeight; y++)
+            {
+                for (int z = 0; z < ChunkLength; z++)
+                {
+                    xyzMap[index++] = new(x, y, z);
+                }
+            }
+        }
+
+        xzMap = new(ChunkWidth * ChunkLength, Allocator.Persistent);
+        index = 0;
+        for (int x = 0; x < ChunkWidth; x++)
+        {
+            for (int z = 0; z < ChunkLength; z++)
+            {
+                xzMap[index++] = new(x, z);
+            }
+        }
     }
 
     public void Dispose(JobHandle dependsOn = default)
@@ -72,5 +99,7 @@ public struct VoxelData
         FaceChecks.Dispose(dependsOn);
         VoxelTris.Dispose(dependsOn);
         VoxelNormals.Dispose(dependsOn);
+        xyzMap.Dispose(dependsOn);
+        xzMap.Dispose(dependsOn);
     }
 }

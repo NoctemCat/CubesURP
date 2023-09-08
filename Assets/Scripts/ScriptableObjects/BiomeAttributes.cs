@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "BiomeAttributes", menuName = "Cubes/Biome Attribute")]
@@ -10,11 +11,13 @@ public class BiomeAttributes : ScriptableObject
 {
     [Header("Biome Settings")]
     public string biomeName;
-    public int offset;
+    public Vector2Int offset;
     public float scale;
 
     public int terrainHeight;
     public float terrainScale;
+
+    public BiomeNoise noise;
 
     public Block surfaceBlock;
     public Block subsurfaceBlock;
@@ -32,6 +35,14 @@ public class BiomeAttributes : ScriptableObject
     public int minHeight = 5;
 
     public Lode[] lodes;
+
+    [Header("Preview Settings(don't use them outside)")]
+    public int previewWidth = 300;
+    public int chunksShownWidth = 4;
+
+    [HideInInspector] public bool needsAutoUpdate;
+    protected void OnValidate() { needsAutoUpdate = !Application.isPlaying; }
+    public void AutoUpdate() { needsAutoUpdate = false; }
 }
 
 [System.Serializable]
@@ -48,13 +59,15 @@ public class Lode
 
 public readonly struct BiomeStruct
 {
-    readonly public int offset;
+    readonly public int2 offset;
     readonly public float scale;
     readonly public int terrainHeight;
     readonly public float terrainScale;
 
     readonly public Block surfaceBlock;
     readonly public Block subsurfaceBlock;
+
+    readonly public NoiseStruct noise;
 
     readonly public StructureType floraType;
     readonly public float floraZoneScale;
@@ -69,12 +82,14 @@ public readonly struct BiomeStruct
 
     public BiomeStruct(BiomeAttributes biome)
     {
-        offset = biome.offset;
+        offset = new(biome.offset.x, biome.offset.y);
         scale = biome.scale;
         terrainHeight = biome.terrainHeight;
         terrainScale = biome.terrainScale;
         surfaceBlock = biome.surfaceBlock;
         subsurfaceBlock = biome.subsurfaceBlock;
+        noise = new(biome.noise);
+
         floraType = biome.floraType;
         floraZoneScale = biome.floraZoneScale;
         floraZoneThreshold = biome.floraZoneThreshold;
@@ -92,6 +107,7 @@ public readonly struct BiomeStruct
 
     public readonly void Dispose(JobHandle inputDeps = default)
     {
+        noise.Dispose(inputDeps);
         lodes.Dispose(inputDeps);
     }
 }

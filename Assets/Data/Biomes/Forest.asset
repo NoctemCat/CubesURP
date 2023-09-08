@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Forest
   m_EditorClassIdentifier: 
   biomeName: Forest
-  offset: 87544
+  offset: {x: 0, y: 0}
   scale: 0.17
   terrainHeight: 80
   terrainScale: 0.6
+  noise: {fileID: 0}
   surfaceBlock: 5
   subsurfaceBlock: 4
   floraType: 0
@@ -41,3 +42,6 @@ MonoBehaviour:
     scale: 0.2
     threshold: 0.6
     noiseOffset: 500
+  previewWidth: 33
+  chunksShownWidth: 4
+  needsAutoUpdate: 0

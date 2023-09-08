@@ -136,7 +136,6 @@ public class SaveSystem : MonoBehaviour
     {
         await UniTask.SwitchToThreadPool();
 
-        Directory.CreateDirectory(SaveChunkPath);
         ChunkData chunkData = _pool.Get();
 
         chunkData.x = chunk.ChunkPos.x;
@@ -192,7 +191,7 @@ public class SaveSystem : MonoBehaviour
     public void SaveChunk(Chunk chunk)
     {
         string chunkPath = PathHelper.GetChunkPath(SaveChunkPath, chunk.ChunkName);
-        Directory.CreateDirectory(SaveChunkPath);
+
 
         ChunkData chunkData = _pool.Get();
 
@@ -209,9 +208,10 @@ public class SaveSystem : MonoBehaviour
         WriteToFile(chunkPath, chunkData).Forget();
     }
 
-    private async UniTask WriteToFile<T>(string chunkPath, T data)
+    private async UniTask WriteToFile<T>(string filePath, T data)
     {
-        Stream stream = new FileStream(chunkPath, FileMode.Create, FileAccess.Write);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+        Stream stream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
         await MemoryPackSerializer.SerializeAsync(stream, data);
 
         stream.Flush();

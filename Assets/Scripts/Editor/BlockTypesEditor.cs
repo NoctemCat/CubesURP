@@ -4,7 +4,6 @@ using UnityEditor;
 [CustomEditor(typeof(BlockObject))]
 public class BlockTypesEditor : Editor
 {
-
     BlockObject block;
     Texture2DArray blockAtlas;
 
