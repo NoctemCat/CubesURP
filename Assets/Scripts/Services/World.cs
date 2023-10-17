@@ -23,9 +23,10 @@ public class World : MonoBehaviour
     public BlockObject[] Blocks { get; private set; }
     public NativeArray<BlockStruct> NativeBlocks { get; private set; }
     public NativeArray<int3> XYZMap { get; private set; }
-    public NativeArray<BiomeStruct> Biomes { get; private set; }
+    //public NativeArray<BiomeStruct> Biomes { get; private set; }
 
-    [SerializeField] private BiomeAttributes[] _biomeScObjs;
+    //[SerializeField] private BiomeAttributes[] _biomeScObjs;
+
     [field: SerializeField] public ActiveWorldData WorldData { get; private set; }
     [field: SerializeField] public Material SolidMaterial { get; private set; }
     [field: SerializeField] public Material TransparentMaterial { get; private set; }
@@ -41,14 +42,20 @@ public class World : MonoBehaviour
     List<Vector3Int> ViewCoords;
     List<Chunk> ActiveChunks;
 
-    private EventSystem _eventSystem;
+    public EventSystem EventSystem { get; private set; }
+    public BiomeGenerator BiomeGenerator { get; private set; }
+    public StructureSystem StructureSystem { get; private set; }
+    public ChunkHeightGenerator ChunkHeightGenerator { get; private set; }
+
+    public BiomeDatabase BiomeDatabase { get; private set; }
 
     private void Awake()
     {
         ServiceLocator.Register(this);
         LoadSettings();
 
-        _eventSystem = ServiceLocator.Get<EventSystem>();
+        EventSystem = ServiceLocator.Get<EventSystem>();
+        BiomeDatabase = ServiceLocator.Get<BiomeDatabase>();
         var itemDatabase = ServiceLocator.Get<ItemDatabaseObject>();
 
         uint seed = math.hash(new int2(WorldData.seed.GetHashCode(), 0));
@@ -61,33 +68,82 @@ public class World : MonoBehaviour
         NativeBlocks = WorldHelper.InitNativeBlocksMapping(Blocks);
         XYZMap = WorldHelper.InitXYZMap(VoxelData);
 
-        NativeArray<BiomeStruct> biomesTemp = new(_biomeScObjs.Length, Allocator.Persistent);
-        for (int i = 0; i < _biomeScObjs.Length; i++)
-        {
-            biomesTemp[i] = new(_biomeScObjs[i]);
-        }
-        Biomes = biomesTemp;
+        //NativeArray<BiomeStruct> biomesTemp = new(_biomeScObjs.Length, Allocator.Persistent);
+        //for (int i = 0; i < _biomeScObjs.Length; i++)
+        //{
+        //    biomesTemp[i] = new(_biomeScObjs[i]);
+        //}
+        //Biomes = biomesTemp;
 
         Chunks = new(ViewCoords.Count);
         DummyMap = new(VoxelData.ChunkSize, Allocator.Persistent, NativeArrayOptions.ClearMemory);
 
         ActiveChunks = new(10);
+    }
+
+    private void Start()
+    {
+        BiomeGenerator = ServiceLocator.Get<BiomeGenerator>();
+        StructureSystem = ServiceLocator.Get<StructureSystem>();
+        ChunkHeightGenerator = ServiceLocator.Get<ChunkHeightGenerator>();
+        SaveSystem = ServiceLocator.Get<SaveSystem>();
 
         PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 80f, VoxelData.ChunkLength / 2);
+        //PlayerObj.transform.position = new(VoxelData.ChunkWidth / 2, 10f, VoxelData.ChunkLength / 2);
     }
 
     private void OnEnable()
     {
-        _eventSystem.StartListening(EventType.ResumeGame, LoadSettingsHandler);
-        _eventSystem.StartListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
-        _eventSystem.StartListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+        EventSystem.StartListening(EventType.ResumeGame, LoadSettingsHandler);
+        EventSystem.StartListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
+        EventSystem.StartListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
     }
 
     private void OnDisable()
     {
-        _eventSystem.StopListening(EventType.ResumeGame, LoadSettingsHandler);
-        _eventSystem.StopListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
-        _eventSystem.StopListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+        EventSystem.StopListening(EventType.ResumeGame, LoadSettingsHandler);
+        EventSystem.StopListening(EventType.Chunk_AddSortedStructures, AddSortedStructures);
+        EventSystem.StopListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
+    }
+
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister(this);
+
+        foreach (var kvp in Chunks)
+        {
+            kvp.Value.Dispose();
+        }
+        NativeBlocks.Dispose();
+        XYZMap.Dispose();
+
+        //for (int i = 0; i < Biomes.Length; i++)
+        //{
+        //    Biomes[i].Dispose();
+        //}
+        //Biomes.Dispose();
+        DummyMap.Dispose();
+
+        VoxelData.Dispose();
+    }
+
+    public void LoadSettingsHandler(in EventArgs _) => LoadSettings();
+    public void LoadSettings()
+    {
+        if (File.Exists($"{Application.dataPath}/settings.cfg"))
+        {
+            string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
+            Settings = JsonUtility.FromJson<Settings>(loadSettings);
+        }
+        else
+        {
+            Settings settings = new();
+            settings.Init();
+            Settings = settings;
+            string saveSettings = JsonUtility.ToJson(settings, true);
+            File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
+        }
+        ViewCoords = WorldHelper.InitViewCoords(Settings.viewDistance);
     }
 
     private void AddSortedStructures(in EventArgs args)
@@ -103,13 +159,12 @@ public class World : MonoBehaviour
         }
         else
         {
-            chunk = new(parsedArgs.chunkPos);
+            chunk = new(this, parsedArgs.chunkPos);
             Chunks[parsedArgs.chunkPos] = chunk;
         }
         chunk.AddRangeModification(parsedArgs.structures).Forget();
     }
 
-    private CancellationTokenSource _cts;
     private bool _generatingChunks = false;
     private Vector3Int _playerChunk;
     private void PlayerChunkChanged(in EventArgs args)
@@ -141,128 +196,6 @@ public class World : MonoBehaviour
         _generatingChunks = false;
     }
 
-    private void Start()
-    {
-        SaveSystem = ServiceLocator.Get<SaveSystem>();
-    }
-
-    private void OnDestroy()
-    {
-        //ServiceLocator.Unregister<MeshDataPool>();
-        ServiceLocator.Unregister(this);
-
-        foreach (var kvp in Chunks)
-        {
-            kvp.Value.Dispose();
-        }
-        NativeBlocks.Dispose();
-        XYZMap.Dispose();
-
-        for (int i = 0; i < Biomes.Length; i++)
-        {
-            Biomes[i].Dispose();
-        }
-        Biomes.Dispose();
-        DummyMap.Dispose();
-
-        //ServiceLocator.Get<MeshDataPool>().Dispose();
-        VoxelData.Dispose();
-    }
-
-    public void LoadSettingsHandler(in EventArgs _) => LoadSettings();
-    public void LoadSettings()
-    {
-        if (File.Exists($"{Application.dataPath}/settings.cfg"))
-        {
-            string loadSettings = File.ReadAllText($"{Application.dataPath}/settings.cfg");
-            Settings = JsonUtility.FromJson<Settings>(loadSettings);
-        }
-        else
-        {
-            Settings settings = new();
-            settings.Init();
-            Settings = settings;
-            string saveSettings = JsonUtility.ToJson(settings, true);
-            File.WriteAllText($"{Application.dataPath}/settings.cfg", saveSettings);
-        }
-        ViewCoords = WorldHelper.InitViewCoords(Settings.viewDistance);
-    }
-
-    public Chunk GetChunkFromVector3(Vector3Int pos)
-    {
-        return Chunks[pos];
-    }
-    public Chunk GetChunkFromVector3(Vector3 worldPos)
-    {
-        return Chunks[GetChunkCoordFromVector3(worldPos)];
-    }
-
-    public void PlaceBlock(Vector3 worldPos, Block block)
-    {
-        Vector3Int chunkPos = GetChunkCoordFromVector3(worldPos);
-        int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
-        Chunks[chunkPos].AddModification(new(VI3ToI3(chunkPos), blockPos, block)).Forget();
-
-        SaveSystem.AddChunkToSave(Chunks[chunkPos]);
-
-        if (blockPos.z == 0)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
-        else if (blockPos.z == VoxelData.ChunkLength - 1)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Front])].MarkDirty();
-
-        if (blockPos.y == VoxelData.ChunkHeight - 1)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Top])].MarkDirty();
-        else if (blockPos.y == 0)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Bottom])].MarkDirty();
-
-        if (blockPos.x == 0)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Left])].MarkDirty();
-        else if (blockPos.x == VoxelData.ChunkWidth - 1)
-            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Right])].MarkDirty();
-
-        //Debug.Log($"{blockPos.x}, {blockPos.y}, {blockPos.z}");
-
-    }
-
-    //Vector3Int lastPlayerChunk = new(-100, -100);
-    //float timer = 0f;
-    //float timerGarbage = 0f;
-    private void Update()
-    {
-        //timer += Time.deltaTime;
-        ////PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
-        _results.Clear();
-        //if (timer > 20f)
-        //{
-        //    Debug.Log($"Exist {Chunks.Count} chunks");
-        //}
-
-        for (int i = 0; i < ActiveChunks.Count; i++)
-        {
-            ActiveChunks[i].Update();
-        }
-    }
-
-    // Basic frustrum culling, currently slower than without it
-    // Currently testing
-    //private bool CheckChunk(Chunk chunk)
-    //{
-    //    Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
-    //    for (int i = 0; i < chunk.WorldPoints.Length; i++)
-    //    {
-    //        bool insidePlane = true;
-
-    //        for (int j = 0; j < planes.Length; j++)
-    //            insidePlane = insidePlane && planes[j].GetSide(chunk.WorldPoints[i]);
-
-
-    //        if (insidePlane)
-    //            return true;
-    //    }
-
-    //    return false;
-    //}
-
     bool GenerateVoxelMaps()
     {
         bool allGenerated = true;
@@ -281,7 +214,7 @@ public class World : MonoBehaviour
                     {
                         if (chunkData is null) return;
 
-                        var chunk = new Chunk(chunkData);
+                        var chunk = new Chunk(this, chunkData);
                         Chunks[checkCoord] = chunk;
 
                         SaveSystem.ReclaimData(checkCoord, chunkData);
@@ -290,7 +223,7 @@ public class World : MonoBehaviour
             }
             else
             {
-                var chunk = new Chunk(checkCoord);
+                var chunk = new Chunk(this, checkCoord);
                 Chunks[checkCoord] = chunk;
             }
 
@@ -306,6 +239,7 @@ public class World : MonoBehaviour
 
         return allGenerated;
     }
+
     public bool CheckChunkFile(string chunkName)
     {
         string chunkFile = PathHelper.GetChunkPath(SaveSystem.SaveChunkPath, chunkName);
@@ -383,6 +317,72 @@ public class World : MonoBehaviour
             }
         }
     }
+
+    public void PlaceBlock(Vector3 worldPos, Block block)
+    {
+        Vector3Int chunkPos = GetChunkCoordFromVector3(worldPos);
+        int3 blockPos = GetPosInChunkFromVector3(chunkPos, worldPos);
+        Chunks[chunkPos].AddModification(new(VI3ToI3(chunkPos), blockPos, block)).Forget();
+
+        SaveSystem.AddChunkToSave(Chunks[chunkPos]);
+
+        if (blockPos.z == 0)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Back])].MarkDirty();
+        else if (blockPos.z == VoxelData.ChunkLength - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Front])].MarkDirty();
+
+        if (blockPos.y == VoxelData.ChunkHeight - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Top])].MarkDirty();
+        else if (blockPos.y == 0)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Bottom])].MarkDirty();
+
+        if (blockPos.x == 0)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Left])].MarkDirty();
+        else if (blockPos.x == VoxelData.ChunkWidth - 1)
+            Chunks[chunkPos + I3ToVI3(VoxelData.FaceChecks[(int)VoxelFaces.Right])].MarkDirty();
+
+        //Debug.Log($"{blockPos.x}, {blockPos.y}, {blockPos.z}");
+
+    }
+
+    //Vector3Int lastPlayerChunk = new(-100, -100);
+    //float timer = 0f;
+    //float timerGarbage = 0f;
+    private void Update()
+    {
+        //timer += Time.deltaTime;
+        ////PlayerChunk = GetChunkCoordFromVector3(PlayerObj.transform.position);
+        _results.Clear();
+        //if (timer > 20f)
+        //{
+        //    Debug.Log($"Exist {Chunks.Count} chunks");
+        //}
+
+        for (int i = 0; i < ActiveChunks.Count; i++)
+        {
+            ActiveChunks[i].Update();
+        }
+    }
+
+    // Basic frustrum culling, currently slower than without it
+    // Currently testing
+    //private bool CheckChunk(Chunk chunk)
+    //{
+    //    Plane[] planes = GeometryUtility.CalculateFrustumPlanes(Camera.main);
+    //    for (int i = 0; i < chunk.WorldPoints.Length; i++)
+    //    {
+    //        bool insidePlane = true;
+
+    //        for (int j = 0; j < planes.Length; j++)
+    //            insidePlane = insidePlane && planes[j].GetSide(chunk.WorldPoints[i]);
+
+
+    //        if (insidePlane)
+    //            return true;
+    //    }
+
+    //    return false;
+    //}
 
     private Vector3Int GetChunkCoordFromVector3(int3 pos)
     {

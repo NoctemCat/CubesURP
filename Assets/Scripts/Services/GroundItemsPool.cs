@@ -15,12 +15,6 @@ public class GroundItemsPool : MonoBehaviour
         ServiceLocator.Register(this);
     }
 
-    private void OnDestroy()
-    {
-        ServiceLocator.Unregister(this);
-        _eventSystem.StopListening(EventType.DropItems, DropItems);
-    }
-
     private void Start()
     {
         _eventSystem = ServiceLocator.Get<EventSystem>();
@@ -30,18 +24,23 @@ public class GroundItemsPool : MonoBehaviour
         AddToPool(amountToPool);
     }
 
+    private void OnDestroy()
+    {
+        ServiceLocator.Unregister(this);
+        _eventSystem.StopListening(EventType.DropItems, DropItems);
+    }
 
     public void AddToPool(int num)
     {
         //amountToPool += num;
-        GameObject tmp;
+        //GameObject tmp;
         for (int i = 0; i < num; i++)
         {
-            tmp = Instantiate(objectToPool, transform);
-            tmp.SetActive(false);
-            tmp.SetActive(true);
-            tmp.SetActive(false);
+            GameObject tmp = Instantiate(objectToPool, transform);
             pooledObjects.Add(tmp);
+            //BlockPhysics phys = tmp.GetComponent<BlockPhysics>();
+            //phys.SetVelocity(Vector3.zero);
+            tmp.SetActive(false);
         }
     }
 
@@ -66,11 +65,11 @@ public class GroundItemsPool : MonoBehaviour
         item.SetActive(true);
         item.transform.position = args.origin;
 
-        BlockPhysics phys = item.GetComponent<BlockPhysics>();
-        phys.AddVelocity(args.velocity);
-
         GroundItem gItem = item.GetComponent<GroundItem>();
         gItem.SetItem(args.itemObject, args.amount);
+
+        BlockPhysics phys = item.GetComponent<BlockPhysics>();
+        phys.SetVelocity(args.velocity);
     }
 
     //public static void DropItems(Vector3 origin, Vector3 velocity, ItemObject itemObject, int amount)

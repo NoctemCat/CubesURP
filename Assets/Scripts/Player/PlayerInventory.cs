@@ -79,14 +79,32 @@ public class PlayerInventory : MonoBehaviour
     {
         var items = ServiceLocator.Get<ItemDatabaseObject>();
 
-        var itemsList = items.ItemObjects.ToList();
-        var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.blockType == Block.Invalid);
-        for (Block i = 0; i < Block.Invalid; i++)
+        //var itemsList = items.ItemObjects.ToList();
+        //var missing = (BlockObject)itemsList.Find((ItemObject item) => item is BlockObject block && block.blockType == Block.Invalid);
+        //for (Block i = 0; i < Block.Invalid; i++)
+        //{
+        //    int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.blockType == i);
+        //    if (itemI != -1)
+        //    {
+        //        if (itemsList[itemI].stackable)
+        //        {
+        //            _creativeInventory.AddItem(new(itemsList[itemI]), 99);
+        //        }
+        //        else
+        //        {
+        //            _creativeInventory.AddItem(new(itemsList[itemI]), 1);
+        //        }
+        //    }
+        //}
+        for (int i = 0; i < items.ItemObjects.Length; i++)
         {
-            int itemI = itemsList.FindIndex((ItemObject item) => item is BlockObject block && block.blockType == i);
-            if (itemI != -1)
+            if (items.ItemObjects[i].stackable)
             {
-                _creativeInventory.AddItem(new(itemsList[itemI]), 99);
+                _creativeInventory.AddItem(new(items.ItemObjects[i]), 99);
+            }
+            else
+            {
+                _creativeInventory.AddItem(new(items.ItemObjects[i]), 1);
             }
         }
     }
@@ -133,17 +151,18 @@ public class PlayerInventory : MonoBehaviour
 
     private void DropItem()
     {
-        if (_player.selectedBlockIndex <= 0) return;
+        if (_player.selectedItemIndex <= 0) return;
 
-        BlockObject selObj = _world.Blocks[_player.selectedBlockIndex];
+        //BlockObject selObj = _world.Blocks[_player.selectedBlockIndex];
+        var item = ServiceLocator.Get<ItemDatabaseObject>().ItemObjects[_player.selectedItemIndex];
 
-        if (RemoveItem(new Item(selObj), 1))
+        if (RemoveItem(new Item(item), 1))
         {
             DropItemsArgs itemsArgs = new()
             {
                 origin = _player.transform.position + new Vector3(0.0f, 1.5f, 0.0f),
                 velocity = _player.GetDropItemVelocity(),
-                itemObject = selObj,
+                itemObject = item,
                 amount = 1
             };
             _eventSystem.TriggerEvent(EventType.DropItems, itemsArgs);

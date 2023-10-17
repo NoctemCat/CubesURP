@@ -10,6 +10,7 @@ public class Toolbar : StaticInterface
 {
     //World world;
     public Player player;
+    public GroundItem toolbarItem;
     public InputActionReference scrollRef;
     public RectTransform highlight;
     int slotIndex = 0;
@@ -74,11 +75,35 @@ public class Toolbar : StaticInterface
     {
         InventorySlot item = slotsOnInterface[Slots[slotIndex]];
 
-        if (item.Amount > 0 && item.ItemObject is BlockObject blockObject)
-            player.selectedBlockIndex = (int)blockObject.blockType;
+        if (item.Amount > 0)
+        {
+            player.selectedItemIndex = item.Item.id;
+
+            if (item.ItemObject is BlockObject blockObject)
+                player.selectedBlockIndex = (int)blockObject.blockType;
+            else
+                player.selectedBlockIndex = -1;
+
+            toolbarItem.SetItem(item.ItemObject, item.Amount);
+            toolbarItem.gameObject.SetActive(true);
+        }
         else
-            player.selectedBlockIndex = -1;
+        {
+            toolbarItem.gameObject.SetActive(false);
+        }
     }
+
+    //// nth fibbonaci number
+    //private int Fib(int n)
+    //{
+    //    if (n == 0)
+    //        return 0;
+    //    else if (n == 1)
+    //        return 1;
+    //    else
+    //        return Fib(n - 1) + Fib(n - 2);
+    //}
+
 }
 
 //[Serializable]

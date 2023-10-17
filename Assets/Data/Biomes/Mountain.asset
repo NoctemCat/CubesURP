@@ -12,11 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e620a09b054cdcc488d4e3cb5ff1c63b, type: 3}
   m_Name: Mountain
   m_EditorClassIdentifier: 
+  id: 1
   biomeName: Mountain
-  offset: 107675
-  scale: 0.19
-  terrainHeight: 800
-  terrainScale: 0.03
+  offset: {x: 0, y: 0}
+  scale: 2.58
+  influenceMult: 0.2
+  minSize: 43
+  maxSize: 59
+  minHeight: 50
+  maxHeight: 92
+  terrainHeight: 120
+  terrainScale: 210.23
+  noise: {fileID: 11400000, guid: c059520afa2d8454c889a2b6f59bb193, type: 2}
   surfaceBlock: 2
   subsurfaceBlock: 2
   floraType: 0
@@ -24,8 +31,6 @@ MonoBehaviour:
   floraZoneThreshold: 0.603
   floraPlacementScale: 60
   floraPlacementThreshold: 0.821
-  maxHeight: 12
-  minHeight: 8
   lodes:
   - nodeName: Dirt
     blockID: 4
@@ -41,3 +46,6 @@ MonoBehaviour:
     scale: 0.2
     threshold: 0.6
     noiseOffset: 500
+  previewWidth: 300
+  chunksShownWidth: 8
+  needsAutoUpdate: 0

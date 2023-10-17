@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 
 [Serializable]
 [CreateAssetMenu(fileName = "BlockType", menuName = "Cubes/Block Type")]
-public class BlockObject : ItemObject, IDroppable
+public class BlockObject : ItemObject, IDroppableMesh
 {
     public Block blockType;
     public bool isSolid;
@@ -21,6 +21,8 @@ public class BlockObject : ItemObject, IDroppable
     public int leftfaceTexture;
     public int rightfaceTexture;
     public Mesh ItemMesh { get; set; }
+    public float ItemScale { get; set; }
+    [field: SerializeField] public Material ItemMaterial { get; set; }
 
     // Back, Front, Top, Bottom, Left, Right
     public int GetTextureID(int faceIndex)
@@ -39,6 +41,7 @@ public class BlockObject : ItemObject, IDroppable
 
     protected override void OnEnable()
     {
+        ItemScale = 0.25f;
         GenerateItemMesh();
     }
 

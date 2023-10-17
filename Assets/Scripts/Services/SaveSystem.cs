@@ -157,7 +157,7 @@ public class SaveSystem : MonoBehaviour
         _pool.Reclaim(chunkData);
     }
 
-    HashSet<Vector3Int> _loadedChunks = new();
+    readonly HashSet<Vector3Int> _loadingChunks = new();
     /// <summary>
     /// File must exist
     /// </summary>
@@ -165,8 +165,8 @@ public class SaveSystem : MonoBehaviour
     /// <returns>UniTask with chunk data</returns>
     public async UniTask<ChunkData> LoadChunkAsync(Vector3Int chunkPos, string chunkName)
     {
-        if (_loadedChunks.Contains(chunkPos)) return null;
-        _loadedChunks.Add(chunkPos);
+        if (_loadingChunks.Contains(chunkPos)) return null;
+        _loadingChunks.Add(chunkPos);
 
         ChunkData chunkData = _pool.Get();
         await UniTask.SwitchToThreadPool();
@@ -184,7 +184,7 @@ public class SaveSystem : MonoBehaviour
 
     public void ReclaimData(Vector3Int chunkPos, ChunkData data)
     {
-        _loadedChunks.Remove(chunkPos);
+        _loadingChunks.Remove(chunkPos);
         _pool.Reclaim(data);
     }
 

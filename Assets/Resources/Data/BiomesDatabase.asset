@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24f5aa911f9dc034b878ae99c377e44f, type: 3}
+  m_Name: BiomesDatabase
+  m_EditorClassIdentifier: 
+  <BiomeObjects>k__BackingField:
+  - {fileID: 11400000, guid: 9bda73ef948be2c4d8c5d6ce5b3b647f, type: 2}
+  - {fileID: 11400000, guid: 0110ef86618db644d97d2a03a1668f29, type: 2}
+  - {fileID: 11400000, guid: 40ed8244d10033b4dbccba0319928fcd, type: 2}

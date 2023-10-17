@@ -9,6 +9,7 @@ public class BlockPhysics : MonoBehaviour
     private float _height;
     private float _length;
 
+    public bool Center { get; private set; }
     public bool Front { get; private set; }
     public bool Back { get; private set; }
     public bool Left { get; private set; }
@@ -26,25 +27,29 @@ public class BlockPhysics : MonoBehaviour
     public bool ApplyGravity;
 
     private Transform _curTansform;
+    private BoxCollider _collider;
 
-    private void Start()
+    private void Awake()
     {
         _world = ServiceLocator.Get<World>();
         _curTansform = transform;
-        Reset();
+        _collider = GetComponent<BoxCollider>();
+        //Reset();
     }
 
-    private void OnDisable()
-    {
-        _velocity = Vector3.zero;
-        _verticalMomentum = 0f;
-    }
+    //private void OnDisable()
+    //{
+    //    _velocity = Vector3.zero;
+    //    _verticalMomentum = 0f;
+    //}
 
     public void Reset()
     {
-        _width = transform.localScale.x / 2f;
-        _height = transform.localScale.y / 2f;
-        _length = transform.localScale.z / 2f;
+        Vector3 size = _collider.size;
+        Vector3 center = _collider.center;
+        _width = transform.localScale.x * size.x / 2f;
+        _height = (transform.localScale.y * size.y - center.y) / 2f;
+        _length = transform.localScale.z * size.z / 2f;
         _velocity = Vector3.zero;
         _verticalMomentum = 0f;
     }
@@ -60,6 +65,7 @@ public class BlockPhysics : MonoBehaviour
 
     public void UpdateDirections(Vector3 pos)
     {
+        Center = _world.CheckForVoxel(new(pos.x, pos.y - _height, pos.z));
         Front = _world.CheckForVoxel(new(pos.x, pos.y - _height, pos.z + _length));
         Back = _world.CheckForVoxel(new(pos.x, pos.y - _height, pos.z - _length));
         Left = _world.CheckForVoxel(new(pos.x - _width, pos.y - _height, pos.z));
@@ -74,6 +80,9 @@ public class BlockPhysics : MonoBehaviour
     {
         if (ApplyGravity && _verticalMomentum > _gravity)
             _verticalMomentum += Time.fixedDeltaTime * _gravity;
+
+        if (Center)
+            _verticalMomentum = Time.fixedDeltaTime * -_gravity;
 
         _velocity += Time.fixedDeltaTime * _verticalMomentum * Vector3.up;
 
@@ -97,6 +106,7 @@ public class BlockPhysics : MonoBehaviour
 
     public void SetVelocity(Vector3 velocity)
     {
+        Reset();
         _velocity = velocity;
         _verticalMomentum = 0f;
     }

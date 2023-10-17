@@ -30,3 +30,5 @@ MonoBehaviour:
   bottomfaceTexture: 14
   leftfaceTexture: 14
   rightfaceTexture: 14
+  <ItemMaterial>k__BackingField: {fileID: 2100000, guid: 6ca309128bc1fa5478151ca6626b17af,
+    type: 2}

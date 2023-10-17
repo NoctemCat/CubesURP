@@ -68,7 +68,6 @@ public static class WorldHelper
         for (int x = -viewDistanceInChunks; x <= viewDistanceInChunks; x++)
         {
             for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
-            //for (int y = 0; y <= 0; y++)
             {
                 for (int z = -viewDistanceInChunks; z <= viewDistanceInChunks; z++)
                 {
@@ -92,4 +91,29 @@ public static class WorldHelper
         return check;
     }
 
+    public static List<Vector2Int> InitViewCoords2D(int viewDistanceInChunks)
+    {
+        List<Vector2Int> check = new();
+        for (int x = -viewDistanceInChunks; x <= viewDistanceInChunks; x++)
+        {
+            for (int y = -viewDistanceInChunks; y <= viewDistanceInChunks; y++)
+            {
+                //if (math.sqrt(x * x + y * y + z * z) <= viewDistanceInChunks)
+                //{
+                //}
+                check.Add(new(x, y));
+            }
+        }
+
+        check.Sort((Vector2Int a, Vector2Int b) =>
+        {
+            if (a.sqrMagnitude > b.sqrMagnitude)
+                return 1;
+            else if (a.sqrMagnitude < b.sqrMagnitude)
+                return -1;
+            else
+                return 0;
+        });
+        return check;
+    }
 }

@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 085ed800bd417c543a78997edb9a6237, type: 3}
   m_Name: Biome Noise
   m_EditorClassIdentifier: 
-  complexOctaves: 1
   octaves:
-  - noiseType: 3
-    noiseLacunarity: 1.94
-    noisePersistence: 0.265
   - noiseType: 1
     noiseLacunarity: 1.94
-    noisePersistence: 0.266
+    noisePersistence: 0.4
+  - noiseType: 0
+    noiseLacunarity: 1.94
+    noisePersistence: 0.4
   - noiseType: 1
     noiseLacunarity: 1.94
-    noisePersistence: 0.389
+    noisePersistence: 0
+  - noiseType: 1
+    noiseLacunarity: 1.94
+    noisePersistence: 0.4
   seed: 4
   noiseScale: 228.34
   chunksShownWidth: 8

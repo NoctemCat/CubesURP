@@ -12,5 +12,9 @@ public static class RegisterServices
         ItemDatabaseObject itemDatabase = Resources.Load<ItemDatabaseObject>("Data/Database");
         itemDatabase.UpdateID();
         ServiceLocator.Register(itemDatabase);
+
+        BiomeDatabase biomeDatabase = Resources.Load<BiomeDatabase>("Data/BiomesDatabase");
+        //biomeDatabase.Init();
+        ServiceLocator.Register(biomeDatabase);
     }
 }

@@ -69,7 +69,16 @@ public abstract class UserInterface : MonoBehaviour
         if (slot.Item.id < 0)
             uiSlot.Disable();
         else
-            uiSlot.Set(slot.ItemObject.uiDisplay, slot.Amount.ToString("n0"), slot.Item.itemName);
+        {
+            if (slot.ItemObject.stackable)
+            {
+                uiSlot.Set(slot.ItemObject.uiDisplay, slot.Amount.ToString("n0"), slot.Item.itemName);
+            }
+            else
+            {
+                uiSlot.Set(slot.ItemObject.uiDisplay, "", slot.Item.itemName);
+            }
+        }
     }
 
     private void OnBeforeUpdate(InventorySlot slot)

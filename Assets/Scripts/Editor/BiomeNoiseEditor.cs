@@ -58,7 +58,6 @@ public class BiomeNoiseEditor : Editor
             128,
             _biomeNoise.seed,
             _biomeNoise.octaves,
-            _biomeNoise.complexOctaves,
             _biomeNoise.noiseScale / _biomeNoise.chunksShownWidth,
             _biomeNoise.offset
         );

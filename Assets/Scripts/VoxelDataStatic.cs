@@ -3,13 +3,15 @@ using UnityEngine;
 
 public static class VoxelDataStatic
 {
-    public static int ChunkWidth = 32;
-    public static int ChunkHeight = 32;
-    public static int ChunkLength = 32;
-    public static int ChunkSize = ChunkWidth * ChunkHeight * ChunkLength;
+    public readonly static int ChunkWidth = 32;
+    public readonly static int ChunkHeight = 32;
+    public readonly static int ChunkLength = 32;
+    public readonly static int ChunkSize = ChunkWidth * ChunkHeight * ChunkLength;
+    public readonly static int BiomeRegionLength = 16;
+    public readonly static int BiomeRegionVoxelLength = BiomeRegionLength * ChunkWidth;
 
-    public static int TextureAtlasSizeInBlocks = 16;
-    public static float NormalizedBlockTextureSize => 1.0f / TextureAtlasSizeInBlocks;
+    public readonly static int TextureAtlasSizeInBlocks = 16;
+    public readonly static float NormalizedBlockTextureSize = 1.0f / TextureAtlasSizeInBlocks;
 
     public static readonly Vector3[] voxelVerts = {
         new(0.0f, 0.0f, 0.0f),

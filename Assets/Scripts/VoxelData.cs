@@ -14,6 +14,9 @@ public struct VoxelData
     public readonly int3 ChunkDimensions;
     public readonly int ChunkSize;
 
+    public readonly int BiomeRegionLength;
+    public readonly int BiomeRegionVoxelLength;
+
     public readonly int TextureAtlasSizeInBlocks;
     public readonly float NormalizedBlockTextureSize;
 
@@ -36,8 +39,13 @@ public struct VoxelData
         ChunkLength = VoxelDataStatic.ChunkLength;
         ChunkDimensions = new(ChunkWidth, ChunkHeight, ChunkLength);
         ChunkSize = VoxelDataStatic.ChunkSize;
+
+        BiomeRegionLength = VoxelDataStatic.BiomeRegionLength;
+        BiomeRegionVoxelLength = VoxelDataStatic.BiomeRegionVoxelLength;
+
         TextureAtlasSizeInBlocks = VoxelDataStatic.TextureAtlasSizeInBlocks;
         NormalizedBlockTextureSize = VoxelDataStatic.NormalizedBlockTextureSize;
+
         seed = _seed;
         RandomXYZ = _randomXYZ;
 

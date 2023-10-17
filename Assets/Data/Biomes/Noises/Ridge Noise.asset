@@ -12,20 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 085ed800bd417c543a78997edb9a6237, type: 3}
   m_Name: Ridge Noise
   m_EditorClassIdentifier: 
-  complexOctaves: 0
   octaves:
-  - noiseType: 4
-    noiseLacunarity: 1.94
+  - noiseType: 5
+    noiseLacunarity: 1
     noisePersistence: 0.4
-  - noiseType: 4
-    noiseLacunarity: 1.94
-    noisePersistence: 0.67
+  - noiseType: 1
+    noiseLacunarity: 1
+    noisePersistence: 0
   - noiseType: 0
-    noiseLacunarity: 1.94
-    noisePersistence: 0.389
+    noiseLacunarity: 2.19
+    noisePersistence: 0.334
   seed: 4
   noiseScale: 228.34
   chunksShownWidth: 8
   offset: {x: 0, y: 0}
   previewWidth: 336
-  needsAutoUpdate: 0
+  needsAutoUpdate: 1

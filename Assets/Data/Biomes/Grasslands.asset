@@ -15,9 +15,11 @@ MonoBehaviour:
   biomeName: Grasslands
   offset: {x: 76, y: 51}
   scale: 0.042
-  terrainHeight: 28
-  terrainScale: 90.88
-  noise: {fileID: 11400000, guid: b5388694fe7a3b646a4b8fbf01747956, type: 2}
+  minSize: 42
+  maxSize: 61
+  terrainHeight: 24
+  terrainScale: 90
+  noise: {fileID: 11400000, guid: 4077e8edf977c9b45adb86d575988aa4, type: 2}
   surfaceBlock: 5
   subsurfaceBlock: 4
   floraType: 0
@@ -25,8 +27,8 @@ MonoBehaviour:
   floraZoneThreshold: 0.4
   floraPlacementScale: 15
   floraPlacementThreshold: 0.6
-  maxHeight: 12
-  minHeight: 5
+  maxHeight: 53
+  minHeight: 46
   lodes:
   - nodeName: Dirt
     blockID: 4
@@ -43,5 +45,5 @@ MonoBehaviour:
     threshold: 0.6
     noiseOffset: 500
   previewWidth: 299
-  chunksShownWidth: 4
-  needsAutoUpdate: 0
+  chunksShownWidth: 1
+  needsAutoUpdate: 1

@@ -14,7 +14,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
-
+using UnityEngine.Assertions.Must;
 using static CubesUtils;
 
 
@@ -30,6 +30,8 @@ public class Chunk
     public Vector3 WorldPos { get; private set; }
 
     private readonly World _world;
+    private readonly BiomeGenerator _biomeGenerator;
+    private readonly ChunkHeightGenerator _chunkHeightGenerator;
     //private readonly MeshDataPool _meshDataPool;
     private readonly EventSystem _eventSystem;
     private readonly StructureSystem _structureSystem;
@@ -67,12 +69,14 @@ public class Chunk
     public JobHandle VoxelMapAccess { get; private set; }
     private Action _initActions;
 
-    private Chunk()
+    private Chunk(World world)
     {
-        _world = ServiceLocator.Get<World>();
+        _world = world;
+        _biomeGenerator = world.BiomeGenerator;
         //_meshDataPool = ServiceLocator.Get<MeshDataPool>();
-        _structureSystem = ServiceLocator.Get<StructureSystem>();
-        _eventSystem = ServiceLocator.Get<EventSystem>();
+        _structureSystem = world.StructureSystem;
+        _eventSystem = world.EventSystem;
+        _chunkHeightGenerator = world.ChunkHeightGenerator;
 
         _initActions += CheckNeighbours;
         _initActions += AddStructuresToWorld;
@@ -115,7 +119,7 @@ public class Chunk
         _eventSystem.StartListening(EventType.PlayerChunkChanged, PlayerChunkChanged);
     }
 
-    public Chunk(Vector3Int chunkPos) : this()
+    public Chunk(World world, Vector3Int chunkPos) : this(world)
     {
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
         WorldPos = new(chunkPos.x * _data.ChunkWidth, chunkPos.y * _data.ChunkHeight, chunkPos.z * _data.ChunkLength);
@@ -126,7 +130,7 @@ public class Chunk
 
         StartGenerating().Forget();
     }
-    public Chunk(ChunkData chunkData) : this()
+    public Chunk(World world, ChunkData chunkData) : this(world)
     {
         Vector3Int chunkPos = chunkData.ChunkPos;
         ChunkPos = new(chunkPos.x, chunkPos.y, chunkPos.z);
@@ -266,6 +270,7 @@ public class Chunk
 
     public void Update()
     {
+        if (IsDisposed) return;
         _initActions?.Invoke();
 
         if (_modifications.Length > 0 && !_isGeneratingMesh)
@@ -351,16 +356,27 @@ public class Chunk
 
     JobHandle GenerateVoxelMap()
     {
+        //Debug.Log(_biomeGenerator.Grid.Count);
+        _chunkHeightGenerator.RequestChunkHeights(
+            new(ChunkPos.x, ChunkPos.z),
+            out NativeArray<float> chunkHeights,
+            out NativeArray<int> closestBiomes,
+            out JobHandle heightsFinish
+        );
         GenerateChunkJobBatch generateChunk = new()
         {
             Data = _data,
-            Biomes = _world.Biomes,
+            Biomes = _world.BiomeDatabase.Biomes,
+            //BiomesGrid = _biomeGenerator.Grid,
+            //BiomesCellSize = _biomeGenerator.CellSize,
+            chunkHeights = chunkHeights,
+            closestBiomesIndeces = closestBiomes,
             ChunkPos = ChunkPos,
 
             VoxelMap = VoxelMap,
             Structures = _structures.AsParallelWriter(),
         };
-        JobHandle generateHandle = generateChunk.Schedule(_data.xzMap.Length, 8);
+        JobHandle generateHandle = generateChunk.Schedule(_data.xzMap.Length, 8, heightsFinish);
         //GenerateChunkJob generateChunk = new()
         //{
         //    Data = _data,
@@ -376,7 +392,7 @@ public class Chunk
         BuildStructuresJob buildStructures = new()
         {
             Data = _data,
-            Biomes = _world.Biomes,
+            Biomes = _world.BiomeDatabase.Biomes,
             ChunkPos = ChunkPos,
             Structures = _structures.AsDeferredJobArray(),
 
@@ -591,6 +607,13 @@ public struct GenerateChunkJobBatch : IJobParallelFor
     public VoxelData Data;
     [ReadOnly]
     public NativeArray<BiomeStruct> Biomes;
+    [ReadOnly]
+    public NativeArray<float> chunkHeights;
+    [ReadOnly]
+    public NativeArray<int> closestBiomesIndeces;
+    //[ReadOnly]
+    //public NativeHashMap<int2, BiomePoint> BiomesGrid;
+    //public float BiomesCellSize;
     //[ReadOnly]
     //public NativeArray<int3> XYZMap;
     //public NativeArray<int3> XYMap;
@@ -609,15 +632,16 @@ public struct GenerateChunkJobBatch : IJobParallelFor
     {
         int2 xz = Data.xzMap[xzPos];
         int2 scaledXZ = new int2(ChunkPos.x, ChunkPos.z) * new int2(Data.ChunkWidth, Data.ChunkLength) + xz;
-        var comb = CalculateHeightTemp(scaledXZ);
-        int biomeIndex = (int)comb.x;
-        float height = comb.y;
+        float3 scaledXYZ = new(scaledXZ.x, 1, scaledXZ.y);
 
+        float height = chunkHeights[xzPos];
+        int closest = closestBiomesIndeces[xzPos];
+        //float height = Biomes[0].terrainHeight * GetHeight(scaledXZ, Biomes[0].terrainScale, Biomes[0].noise.octaves, octavesOffsets, Biomes[0].noise.complexOctaves);
         for (int y = 0; y < Data.ChunkHeight; y++)
         {
             int3 xyzPos = new(xz.x, y, xz.y);
             int3 scaledPos = ChunkPos * Data.ChunkDimensions + xyzPos;
-            VoxelMap[CalcIndex(Data, xyzPos)] = GetVoxel(biomeIndex, height, scaledPos);
+            VoxelMap[CalcIndex(Data, xyzPos)] = GetVoxel(Biomes[closest], height, scaledPos);
         }
     }
 
@@ -662,11 +686,11 @@ public struct GenerateChunkJobBatch : IJobParallelFor
         {
             octavesOffsets[i] = rng.NextFloat2(-100000, 100000) + Biomes[0].offset;
         }
-        float height = GetHeight(xz, new(Data.ChunkWidth, Data.ChunkLength), Biomes[0].terrainScale, Biomes[0].noise.octaves, octavesOffsets, Biomes[0].noise.complexOctaves);
+        float height = GetHeight(xz, Biomes[0].terrainScale, Biomes[0].noise.octaves, octavesOffsets);
         return new(0, Biomes[0].terrainHeight * height);
     }
 
-    public Block GetVoxel(int biomeIndex, float height, int3 pos)
+    public Block GetVoxel(BiomeStruct biome, float height, int3 pos)
     {
         // IMMUTABLE PASS
         //if (pos.y == 0)
@@ -674,10 +698,10 @@ public struct GenerateChunkJobBatch : IJobParallelFor
 
         // BIOME SELECTION PASS
 
-        BiomeStruct biome = Biomes[biomeIndex];
-        int solidGroundHeight = 42;
+        //BiomeStruct biome = Biomes[biomeIndex];
+        //int solidGroundHeight = 42;
 
-        int terrainHeight = (int)math.floor(height + solidGroundHeight);
+        int terrainHeight = (int)math.floor(height);
 
         Block voxelValue;
 
@@ -720,7 +744,7 @@ public struct GenerateChunkJobBatch : IJobParallelFor
             {
                 if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.floraPlacementScale) > biome.floraPlacementThreshold)
                 {
-                    Structures.AddNoResize(new(biomeIndex, pos, biome.floraType));
+                    //Structures.AddNoResize(new(biomeIndex, pos, biome.floraType));
                 }
             }
         }
@@ -728,6 +752,7 @@ public struct GenerateChunkJobBatch : IJobParallelFor
         return voxelValue;
     }
 
+    //public Block GetVoxel()
 }
 
 
@@ -877,3 +902,5 @@ public struct ClearListJob : IJob
         List.Clear();
     }
 }
+
+

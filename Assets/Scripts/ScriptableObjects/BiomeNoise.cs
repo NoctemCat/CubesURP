@@ -9,7 +9,6 @@ using UnityEngine;
 public class BiomeNoise : ScriptableObject
 {
     [Header("If complex is false noise will use lacunarity and persistense of the first element")]
-    public bool complexOctaves = true;
     public List<OctaveValues> octaves = new();
 
     [Header("Preview Options(Don't use them for code)")]
@@ -20,18 +19,16 @@ public class BiomeNoise : ScriptableObject
     public int previewWidth;
 
     [HideInInspector] public bool needsAutoUpdate;
-    protected void OnValidate() { needsAutoUpdate = !Application.isPlaying; }
+    protected void OnValidate() { needsAutoUpdate = true; }
     public void AutoUpdate() { needsAutoUpdate = false; }
 }
 
 public readonly struct NoiseStruct
 {
-    public readonly bool complexOctaves;
     public readonly UnsafeList<OctaveValues> octaves;
 
     public NoiseStruct(BiomeNoise biomeNoise)
     {
-        complexOctaves = biomeNoise.complexOctaves;
         octaves = new(biomeNoise.octaves.Count, Allocator.Persistent);
         for (int i = 0; i < biomeNoise.octaves.Count; i++)
         {

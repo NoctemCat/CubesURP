@@ -53,7 +53,6 @@ public class BiomeAttributesEditor : Editor
             128,
             _biomeAttributes.noise.seed,
             _biomeAttributes.noise.octaves,
-            _biomeAttributes.noise.complexOctaves,
             _biomeAttributes.terrainScale / _biomeAttributes.chunksShownWidth,
             _biomeAttributes.noise.offset
         );

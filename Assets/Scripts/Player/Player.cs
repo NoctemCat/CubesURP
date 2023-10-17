@@ -54,6 +54,7 @@ public class Player : MonoBehaviour
     public Transform placeBlock;
     public float reach = 8f;
 
+    public int selectedItemIndex = -1;
     public int selectedBlockIndex = -1;
     public bool isJumping;
 
@@ -177,7 +178,7 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        var playerChunk = GetChunkCoordFromVector3(_curTransform.position);
+        var playerChunk = GetChunkCoord(_curTransform.position);
 
         if (_lastPlayerChunk != playerChunk)
         {

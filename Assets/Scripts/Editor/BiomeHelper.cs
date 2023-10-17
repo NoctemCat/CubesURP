@@ -5,10 +5,10 @@ using UnityEngine;
 
 public static class BiomeHelper
 {
-    public static void FillTexture(ref Texture2D _noiseTexture, int mapWidth, int mapHeight, uint seed, List<OctaveValues> octaves, bool complexOctaves, float scale, Vector2 offset)
+    public static void FillTexture(ref Texture2D _noiseTexture, int mapWidth, int mapHeight, uint seed, List<OctaveValues> octaves, float scale, Vector2 offset)
     {
         if (_noiseTexture == null) return;
-        float[,] noiseMap = GenerateNoiseMap(mapWidth, mapHeight, seed, octaves, complexOctaves, scale, offset);
+        float[,] noiseMap = GenerateNoiseMap(mapWidth, mapHeight, seed, octaves, scale, offset);
 
         Color[] colourMap = new Color[mapWidth * mapHeight];
         for (int y = 0; y < mapHeight; y++)
@@ -23,7 +23,7 @@ public static class BiomeHelper
         _noiseTexture.Apply();
     }
 
-    private static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, uint seed, List<OctaveValues> octaves, bool complexOctaves, float scale, Vector2 offset)
+    private static float[,] GenerateNoiseMap(int mapWidth, int mapHeight, uint seed, List<OctaveValues> octaves, float scale, Vector2 offset)
     {
         float[,] noiseMap = new float[mapWidth, mapHeight];
 
@@ -47,7 +47,7 @@ public static class BiomeHelper
         {
             for (int y = 0; y < mapHeight; y++)
             {
-                float noiseHeight = GetHeight(new(x, y), new(mapWidth, mapHeight), scale, octaves, octavesOffsets, complexOctaves);
+                float noiseHeight = GetHeight(new(x, y), new(mapWidth, mapHeight), scale, octaves, octavesOffsets);
 
                 if (noiseHeight < minNoiseHeight)
                     minNoiseHeight = noiseHeight;
@@ -67,7 +67,7 @@ public static class BiomeHelper
         return noiseMap;
     }
 
-    public static float GetHeight(float2 pos, float2 size, float scale, List<OctaveValues> octaves, float2[] octavesOffsets, bool complexOctaves)
+    public static float GetHeight(float2 pos, float2 size, float scale, List<OctaveValues> octaves, float2[] octavesOffsets)
     {
         float frequency = 1f;
         float amplitute = 1f;
@@ -77,7 +77,7 @@ public static class BiomeHelper
         {
             float2 sample = ((pos - size / 2) / scale + octavesOffsets[i]) * frequency;
 
-            float perlinValue = (complexOctaves ? octaves[i].noiseType : octaves[0].noiseType) switch
+            float perlinValue = octaves[i].noiseType switch
             {
                 NoiseType.Perlin => noise.cnoise(sample),
                 NoiseType.Simplex => noise.snoise(sample),
@@ -92,8 +92,8 @@ public static class BiomeHelper
 
             noiseHeight += perlinValue * amplitute;
 
-            frequency *= complexOctaves ? octaves[i].noiseLacunarity : octaves[0].noiseLacunarity;
-            amplitute *= complexOctaves ? octaves[i].noisePersistence : octaves[0].noisePersistence;
+            frequency *= octaves[i].noiseLacunarity;
+            amplitute *= octaves[i].noisePersistence;
         }
 
         return noiseHeight;

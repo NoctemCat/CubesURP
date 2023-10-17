@@ -9,10 +9,19 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "BiomeAttributes", menuName = "Cubes/Biome Attribute")]
 public class BiomeAttributes : ScriptableObject
 {
+    public int id;
+
     [Header("Biome Settings")]
     public string biomeName;
     public Vector2Int offset;
     public float scale;
+    public float influenceMult = 1f;
+
+    public int minSize;
+    public int maxSize;
+
+    public int minHeight = 5;
+    public int maxHeight = 12;
 
     public int terrainHeight;
     public float terrainScale;
@@ -31,8 +40,6 @@ public class BiomeAttributes : ScriptableObject
     [Range(0.1f, 1f)]
     public float floraPlacementThreshold = 0.8f;
 
-    public int maxHeight = 12;
-    public int minHeight = 5;
 
     public Lode[] lodes;
 
@@ -41,7 +48,7 @@ public class BiomeAttributes : ScriptableObject
     public int chunksShownWidth = 4;
 
     [HideInInspector] public bool needsAutoUpdate;
-    protected void OnValidate() { needsAutoUpdate = !Application.isPlaying; }
+    protected void OnValidate() { needsAutoUpdate = true; }
     public void AutoUpdate() { needsAutoUpdate = false; }
 }
 
@@ -59,8 +66,14 @@ public class Lode
 
 public readonly struct BiomeStruct
 {
+    readonly public int id;
+
+    readonly public int minSize;
+    readonly public int maxSize;
     readonly public int2 offset;
     readonly public float scale;
+    readonly public float influenceMult;
+
     readonly public int terrainHeight;
     readonly public float terrainScale;
 
@@ -82,8 +95,13 @@ public readonly struct BiomeStruct
 
     public BiomeStruct(BiomeAttributes biome)
     {
+        id = biome.id;
+        minSize = biome.minSize;
+        maxSize = biome.maxSize;
         offset = new(biome.offset.x, biome.offset.y);
         scale = biome.scale;
+        influenceMult = biome.influenceMult;
+
         terrainHeight = biome.terrainHeight;
         terrainScale = biome.terrainScale;
         surfaceBlock = biome.surfaceBlock;
