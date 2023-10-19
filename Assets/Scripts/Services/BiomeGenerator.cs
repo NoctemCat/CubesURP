@@ -39,28 +39,6 @@ public class BiomeGenerator : MonoBehaviour
 
         _biomeDatabase.Init();
 
-        //NativeArray<BiomeStruct> biomesTemp = new(BiomeObjects.Count, Allocator.Persistent);
-        //for (int i = 0; i < BiomeObjects.Count; i++)
-        //{
-        //    biomesTemp[i] = new(BiomeObjects[i]);
-        //}
-        //Biomes = biomesTemp;
-
-        //for (int i = 0; i < BiomeObjects.Count; i++)
-        //{
-        //    _biomesMinSize = Mathf.Min(BiomeObjects[i].minSize, _biomesMinSize);
-        //    _biomesMaxSize = Mathf.Max(BiomeObjects[i].maxSize, _biomesMaxSize);
-        //}
-        //CellSize = _biomesMinSize / math.SQRT2;
-        //for (int i = 0; i < _biomeDatabase.BiomeObjects.Length; i++)
-        //{
-        //    Debug.Log("Objects: " + _biomeDatabase.BiomeObjects[i].id);
-        //}
-        //for (int i = 0; i < _biomeDatabase.Biomes.Length; i++)
-        //{
-        //    Debug.Log(_biomeDatabase.Biomes[i].id);
-        //}
-
         Grid = new(100, Allocator.Persistent);
         GeneratedRegions = new(10, Allocator.Persistent);
 
@@ -309,7 +287,6 @@ public struct PopulateBiomesGridJob : IJob
 
     public void GeneratePoints(float2 offset, float cellSize, float maxRadius, int regionLength, uint seed, int numSamplesBeforeRejection = 30)
     {
-        //float cellSize = minRadius / math.SQRT2;
         Unity.Mathematics.Random rng = new(math.hash(new float2(offset.x + seed, offset.y + seed)));
 
         NativeHashMap<int2, BiomePoint> localGrid = new(20, Allocator.Temp);
@@ -394,14 +371,12 @@ public struct PopulateBiomesGridJob : IJob
 
     public readonly int GetRandomWeightedIndex(NativeArray<float> weights, ref Unity.Mathematics.Random rng)
     {
-        // Get the total sum of all the weights.
         float weightSum = 0f;
         for (int i = 0; i < weights.Length; ++i)
         {
             weightSum += weights[i];
         }
 
-        // Step through all the possibilities, one by one, checking to see if each one is selected.
         int index = 0;
         int lastIndex = weights.Length - 1;
 
@@ -416,7 +391,6 @@ public struct PopulateBiomesGridJob : IJob
             x -= weights[index++];
         }
 
-        // No other item was selected, so return very last index.
         return index;
     }
 }

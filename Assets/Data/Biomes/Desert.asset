@@ -17,7 +17,7 @@ MonoBehaviour:
   offset: {x: 0, y: 0}
   scale: 4.88
   influenceMult: 0.7
-  biomeWeight: 1
+  biomeWeight: 0.5
   minSize: 34
   maxSize: 40
   minHeight: 39
@@ -50,6 +50,6 @@ MonoBehaviour:
     scale: 0.2
     threshold: 0.6
     noiseOffset: 500
-  previewWidth: 264
-  chunksShownWidth: 4
-  needsAutoUpdate: 1
+  previewWidth: 300
+  chunksShownWidth: 8
+  needsAutoUpdate: 0

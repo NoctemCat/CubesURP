@@ -190,18 +190,9 @@ public struct PopulateHeightMap : IJob
         float gatherRadius = radius + math.max(data.ChunkWidth, data.ChunkLength);
         GatherPoints(chunkCenter, gatherRadius, visitedCells, nearBiomes);
 
-        int maxOctaves = 0;
-        for (int i = 0; i < nearBiomes.Length; i++)
-        {
-            if (maxOctaves < biomes[nearBiomes[i].biomeId].noise.octaves.Length)
-            {
-                maxOctaves = biomes[nearBiomes[i].biomeId].noise.octaves.Length;
-            }
-        }
-
+        int maxOctaves = 16;
         Unity.Mathematics.Random rng = new(math.hash(new uint2(data.seed, data.seed)));
 
-        maxOctaves = 16;
         NativeArray<float2> octavesOffsets = new(maxOctaves, Allocator.Temp);
         for (int i = 0; i < octavesOffsets.Length; i++)
         {

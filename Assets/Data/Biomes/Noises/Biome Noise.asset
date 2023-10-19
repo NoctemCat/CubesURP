@@ -21,13 +21,10 @@ MonoBehaviour:
     noisePersistence: 0.4
   - noiseType: 1
     noiseLacunarity: 1.94
-    noisePersistence: 0
-  - noiseType: 1
-    noiseLacunarity: 1.94
     noisePersistence: 0.4
   seed: 4
   noiseScale: 228.34
   chunksShownWidth: 8
   offset: {x: 0, y: 0}
   previewWidth: 336
-  needsAutoUpdate: 0
+  needsAutoUpdate: 1
