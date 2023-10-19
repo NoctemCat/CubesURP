@@ -32,6 +32,7 @@ public class BiomeAttributes : ScriptableObject
     public Block subsurfaceBlock;
 
     [Header("Major Flora")]
+    public bool useFlora = true;
     public StructureType floraType;
     public float floraZoneScale = 1.3f;
     [Range(0.1f, 1f)]
@@ -39,6 +40,8 @@ public class BiomeAttributes : ScriptableObject
     public float floraPlacementScale = 15f;
     [Range(0.1f, 1f)]
     public float floraPlacementThreshold = 0.8f;
+    public int floraMinHeight = 5;
+    public int floraMaxHeight = 12;
 
 
     public Lode[] lodes;
@@ -82,11 +85,14 @@ public readonly struct BiomeStruct
 
     readonly public NoiseStruct noise;
 
+    readonly public bool useFlora;
     readonly public StructureType floraType;
     readonly public float floraZoneScale;
     readonly public float floraZoneThreshold;
     readonly public float floraPlacementScale;
     readonly public float floraPlacementThreshold;
+    readonly public int floraMinHeight;
+    readonly public int floraMaxHeight;
 
     readonly public int maxHeight;
     readonly public int minHeight;
@@ -108,11 +114,14 @@ public readonly struct BiomeStruct
         subsurfaceBlock = biome.subsurfaceBlock;
         noise = new(biome.noise);
 
+        useFlora = biome.useFlora;
         floraType = biome.floraType;
         floraZoneScale = biome.floraZoneScale;
         floraZoneThreshold = biome.floraZoneThreshold;
         floraPlacementScale = biome.floraPlacementScale;
         floraPlacementThreshold = biome.floraPlacementThreshold;
+        floraMinHeight = biome.floraMinHeight;
+        floraMaxHeight = biome.floraMaxHeight;
         maxHeight = biome.maxHeight;
         minHeight = biome.minHeight;
 

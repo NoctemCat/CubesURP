@@ -85,7 +85,7 @@ public class Chunk
 
         VoxelMap = new(_data.ChunkSize, Allocator.Persistent);
         _structures = new(100, Allocator.Persistent);
-        NeighbourModifications = new(1024, Allocator.Persistent);
+        NeighbourModifications = new(2048, Allocator.Persistent);
         _modifications = new(100, Allocator.Persistent);
 
         _voxelMapGenerated = false;
@@ -641,7 +641,7 @@ public struct GenerateChunkJobBatch : IJobParallelFor
         {
             int3 xyzPos = new(xz.x, y, xz.y);
             int3 scaledPos = ChunkPos * Data.ChunkDimensions + xyzPos;
-            VoxelMap[CalcIndex(Data, xyzPos)] = GetVoxel(Biomes[closest], height, scaledPos);
+            VoxelMap[CalcIndex(Data, xyzPos)] = GetVoxel(Biomes[closest], closest, height, scaledPos);
         }
     }
 
@@ -690,7 +690,7 @@ public struct GenerateChunkJobBatch : IJobParallelFor
         return new(0, Biomes[0].terrainHeight * height);
     }
 
-    public Block GetVoxel(BiomeStruct biome, float height, int3 pos)
+    public Block GetVoxel(BiomeStruct biome, int biomeIndex, float height, int3 pos)
     {
         // IMMUTABLE PASS
         //if (pos.y == 0)
@@ -738,13 +738,13 @@ public struct GenerateChunkJobBatch : IJobParallelFor
             }
         }
 
-        if (pos.y == terrainHeight)
+        if (biome.useFlora && pos.y == terrainHeight)
         {
             if (Get2DPerlin(Data, new float2(pos.x, pos.z), 750, biome.floraZoneScale) > biome.floraZoneThreshold)
             {
                 if (Get2DPerlin(Data, new float2(pos.x, pos.z), 1250, biome.floraPlacementScale) > biome.floraPlacementThreshold)
                 {
-                    //Structures.AddNoResize(new(biomeIndex, pos, biome.floraType));
+                    Structures.AddNoResize(new(biomeIndex, pos, biome.floraType));
                 }
             }
         }
@@ -780,10 +780,10 @@ public struct BuildStructuresJob : IJobParallelForDefer
         switch (Structures[i].type)
         {
             case StructureType.Tree:
-                MakeTree(Structures[i].position, biome.minHeight, biome.maxHeight);
+                MakeTree(Structures[i].position, biome.floraMinHeight, biome.floraMaxHeight);
                 break;
             case StructureType.Cactus:
-                MakeCacti(Structures[i].position, biome.minHeight, biome.maxHeight);
+                MakeCacti(Structures[i].position, biome.floraMinHeight, biome.floraMaxHeight);
                 break;
         }
     }

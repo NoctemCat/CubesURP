@@ -12,11 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e620a09b054cdcc488d4e3cb5ff1c63b, type: 3}
   m_Name: Desert
   m_EditorClassIdentifier: 
+  id: 2
   biomeName: Desert
   offset: {x: 0, y: 0}
   scale: 4.88
+  influenceMult: 0.7
   minSize: 34
   maxSize: 40
+  minHeight: 39
+  maxHeight: 50
   terrainHeight: 10
   terrainScale: 101.87
   noise: {fileID: 11400000, guid: c31067b764e7b494a8a2de4cd4f382b1, type: 2}
@@ -27,8 +31,6 @@ MonoBehaviour:
   floraZoneThreshold: 0.184
   floraPlacementScale: 55.48
   floraPlacementThreshold: 0.702
-  maxHeight: 50
-  minHeight: 39
   lodes:
   - nodeName: Dirt
     blockID: 4
@@ -46,4 +48,4 @@ MonoBehaviour:
     noiseOffset: 500
   previewWidth: 264
   chunksShownWidth: 4
-  needsAutoUpdate: 0
+  needsAutoUpdate: 1
