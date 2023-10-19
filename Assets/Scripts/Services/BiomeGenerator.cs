@@ -313,9 +313,15 @@ public struct PopulateBiomesGridJob : IJob
         Unity.Mathematics.Random rng = new(math.hash(new float2(offset.x + seed, offset.y + seed)));
 
         NativeHashMap<int2, BiomePoint> localGrid = new(20, Allocator.Temp);
+        NativeArray<float> weights = new(biomes.Length, Allocator.Temp);
+        for (int i = 0; i < biomes.Length; i++)
+        {
+            weights[i] = biomes[i].biomeWeight;
+        }
         for (int spawnAttempts = numSamplesBeforeRejection; spawnAttempts > 0; spawnAttempts--)
         {
-            BiomeStruct biome = biomes[rng.NextInt(0, biomes.Length)];
+
+            BiomeStruct biome = biomes[GetRandomWeightedIndex(weights, ref rng)];
             BiomePoint point = new()
             {
                 biomeId = biome.id,
@@ -383,5 +389,34 @@ public struct PopulateBiomesGridJob : IJob
             }
         }
         return true;
+    }
+
+
+    public readonly int GetRandomWeightedIndex(NativeArray<float> weights, ref Unity.Mathematics.Random rng)
+    {
+        // Get the total sum of all the weights.
+        float weightSum = 0f;
+        for (int i = 0; i < weights.Length; ++i)
+        {
+            weightSum += weights[i];
+        }
+
+        // Step through all the possibilities, one by one, checking to see if each one is selected.
+        int index = 0;
+        int lastIndex = weights.Length - 1;
+
+        float x = rng.NextFloat(0f, weightSum);
+        while (index < lastIndex)
+        {
+            if ((x - weights[index]) < 0f)
+            {
+                return index;
+            }
+
+            x -= weights[index++];
+        }
+
+        // No other item was selected, so return very last index.
+        return index;
     }
 }

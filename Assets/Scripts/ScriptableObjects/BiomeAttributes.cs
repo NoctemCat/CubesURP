@@ -16,6 +16,7 @@ public class BiomeAttributes : ScriptableObject
     public Vector2Int offset;
     public float scale;
     public float influenceMult = 1f;
+    public float biomeWeight = 1f;
 
     public int minSize;
     public int maxSize;
@@ -76,6 +77,7 @@ public readonly struct BiomeStruct
     readonly public int2 offset;
     readonly public float scale;
     readonly public float influenceMult;
+    readonly public float biomeWeight;
 
     readonly public int terrainHeight;
     readonly public float terrainScale;
@@ -107,6 +109,7 @@ public readonly struct BiomeStruct
         offset = new(biome.offset.x, biome.offset.y);
         scale = biome.scale;
         influenceMult = biome.influenceMult;
+        biomeWeight = biome.biomeWeight;
 
         terrainHeight = biome.terrainHeight;
         terrainScale = biome.terrainScale;

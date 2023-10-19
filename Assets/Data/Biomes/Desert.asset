@@ -17,6 +17,7 @@ MonoBehaviour:
   offset: {x: 0, y: 0}
   scale: 4.88
   influenceMult: 0.7
+  biomeWeight: 1
   minSize: 34
   maxSize: 40
   minHeight: 39
@@ -26,11 +27,14 @@ MonoBehaviour:
   noise: {fileID: 11400000, guid: c31067b764e7b494a8a2de4cd4f382b1, type: 2}
   surfaceBlock: 9
   subsurfaceBlock: 9
+  useFlora: 1
   floraType: 1
   floraZoneScale: 55.48
   floraZoneThreshold: 0.184
   floraPlacementScale: 55.48
   floraPlacementThreshold: 0.702
+  floraMinHeight: 5
+  floraMaxHeight: 7
   lodes:
   - nodeName: Dirt
     blockID: 4
